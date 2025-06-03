@@ -1,13 +1,32 @@
 <template>
-  <div class="container mx-auto py-8">
-    <div v-if="loading" class="text-center">Loading...</div>
-    <div v-else-if="!post" class="text-center text-red-500">Post not found.</div>
-    <div v-else>
-      <NuxtLink to="/blog" class="text-blue-500 hover:underline mb-4 inline-block">&larr; Back to Blog</NuxtLink>
-      <h1 class="text-3xl font-bold mb-2">{{ post.title }}</h1>
-      <div class="text-gray-500 text-sm mb-4">By {{ post.sender }} | {{ formatDate(post.timestamp) }}</div>
-      <div class="blog-content text-gray-800 mb-8" v-html="renderedText"></div>
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in">
+    <div v-if="loading" class="text-center p-8">
+      <div class="inline-block animate-pulse">
+        <div class="h-4 w-24 bg-blue-200 rounded"></div>
+      </div>
     </div>
+    <div v-else-if="!post" class="text-center text-red-500 p-8">
+      <h2 class="text-xl font-semibold">Post not found</h2>
+      <p class="mt-2">The blog post you're looking for doesn't exist.</p>
+      <NuxtLink to="/blog" class="mt-4 inline-block px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors">
+        Return to Blog
+      </NuxtLink>
+    </div>
+    <article v-else class="bg-white rounded-lg shadow-sm p-6 sm:p-8">
+      <div class="mb-8">
+        <NuxtLink to="/blog" class="text-blue-500 hover:text-blue-600 transition-colors flex items-center gap-1 mb-4">
+          <span>&larr;</span>
+          <span>Back to Blog</span>
+        </NuxtLink>
+        <h1 class="text-3xl sm:text-4xl font-bold text-gray-900 mb-3">{{ post.title }}</h1>
+        <div class="text-gray-500 text-sm flex items-center gap-2">
+          <span>By {{ post.sender }}</span>
+          <span>&bull;</span>
+          <time :datetime="post.timestamp">{{ formatDate(post.timestamp) }}</time>
+        </div>
+      </div>
+      <div class="prose prose-blue max-w-none" v-html="renderedText"></div>
+    </article>
   </div>
 </template>
 
@@ -56,65 +75,4 @@ onMounted(async () => {
 })
 </script>
 
-<style scoped>
-.container {
-  max-width: 700px;
-}
 
-/* Add basic styling for rendered markdown */
-.blog-content h1, .blog-content h2, .blog-content h3, .blog-content h4, .blog-content h5, .blog-content h6 {
-  font-weight: bold;
-  margin-top: 1em;
-  margin-bottom: 0.5em;
-}
-
-.blog-content h1 { font-size: 2em; }
-.blog-content h2 { font-size: 1.5em; }
-.blog-content h3 { font-size: 1.2em; }
-
-.blog-content p {
-  margin-bottom: 1em;
-}
-
-.blog-content pre {
-  background-color: #f4f4f4;
-  padding: 1em;
-  overflow-x: auto;
-  border-radius: 4px;
-}
-
-.blog-content code {
-  font-family: Consolas, Monaco, 'Andale Mono', 'Ubuntu Mono', monospace;
-  font-size: 0.9em;
-}
-
-.blog-content pre code {
-  display: block;
-}
-
-.blog-content blockquote {
-  border-left: 4px solid #ccc;
-  padding-left: 1em;
-  margin-left: 0;
-  font-style: italic;
-}
-
-.blog-content ul, .blog-content ol {
-  margin-bottom: 1em;
-  padding-left: 2em;
-}
-
-.blog-content li {
-  margin-bottom: 0.5em;
-}
-
-.blog-content a {
-  color: #2563eb;
-  text-decoration: underline;
-}
-
-.blog-content img {
-  max-width: 100%;
-  height: auto;
-}
-</style>

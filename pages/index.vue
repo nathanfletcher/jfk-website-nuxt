@@ -1,18 +1,5 @@
 <template>
   <div>
-    <!-- Navbar -->
-    <nav class="bg-gradient-to-r from-blue-700 to-blue-400 shadow-lg py-4 px-6 flex items-center justify-between animate-fade-in-down">
-      <NuxtLink to="/" class="flex items-center gap-2">
-        <span class="text-white text-2xl font-extrabold tracking-tight">JFK Blog</span>
-      </NuxtLink>
-      <div class="flex gap-6">
-        <NuxtLink to="/" class="nav-link" exact>Home</NuxtLink>
-        <NuxtLink to="/blog" class="nav-link">Blog</NuxtLink>
-        <a href="#about" class="nav-link">About</a>
-        <a href="#contact" class="nav-link">Contact</a>
-      </div>
-    </nav>
-
     <!-- Hero Section -->
     <section class="hero-section animate-fade-in-up">
       <div class="container mx-auto py-12 flex flex-col items-center text-center">
