@@ -61,3 +61,8 @@
     transform: scale(1);
   }
 }
+.container {
+  /* max-width: 1000px; Increased max-width for better layout with 3 columns */
+  background: linear-gradient(120deg, #f0f9ff 20%, #e0e7ef 19%);
+  opacity: 0.85;
+}

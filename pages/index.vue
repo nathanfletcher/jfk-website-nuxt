@@ -4,7 +4,7 @@
     <section class="hero-section animate-fade-in-up bg-[url(/images/jt-hero-1.jpg)] bg-cover bg-center flex items-end min-h-[60vh]">
       <div class="container mx-auto items-start  backdrop-blur-sm shadow-lg mb-8 pl-25 pt-5 pb-10 md:text-left">
         <!-- <img src="https://ui-avatars.com/api/?name=John+Franklin+Tamakloe&background=0D8ABC&color=fff&size=128" alt="JFK Avatar" class="rounded-full shadow-lg mb-6 animate-pop-in" width="128" height="128" /> -->
-        <h1 class="text-4xl md:text-5xl text-blue-500 font-bold mb-4 ">Hi, I'm John Tamakloe</h1>
+        <h1 class="text-4xl md:text-5xl text-blue-500 font-bold mb-4 ">Hello, I'm John Tamakloe (Evangelist)</h1>
         <p class="text-lg md:text-xl text-gray-700 mb-6 max-w-2xl">Welcome to my personal website! Here, you'll find where I share reflections, stories, and lessons from my journey of faith, life, and learning. Join me as we explore practical Christianity, unity, purpose, and the beauty of everyday moments.</p>
         <NuxtLink to="/blog" class="cta-btn">Read Latest Posts</NuxtLink>
       </div>
@@ -175,11 +175,7 @@ onMounted(async () => {
 
 }
 
-.container {
-  /* max-width: 1000px; Increased max-width for better layout with 3 columns */
-  background: linear-gradient(120deg, #f0f9ff 20%, #e0e7ef 19%);
-  opacity: 0.85;
-}
+
 
 .line-clamp-3 {
   display: -webkit-box;

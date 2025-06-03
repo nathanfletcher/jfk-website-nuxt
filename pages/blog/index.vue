@@ -1,6 +1,14 @@
 <template>
+            <!-- Hero Section -->
+    <section class="hero-section animate-fade-in-up bg-[url(/images/jt-hero-2.jpg)] bg-cover bg-center flex items-end min-h-[60vh]">
+      <div class="container mx-auto items-start  backdrop-blur-sm shadow-lg mb-8 pl-25 pt-5 pb-10 md:text-left">
+        <!-- <img src="https://ui-avatars.com/api/?name=John+Franklin+Tamakloe&background=0D8ABC&color=fff&size=128" alt="JFK Avatar" class="rounded-full shadow-lg mb-6 animate-pop-in" width="128" height="128" /> -->
+        <h1 class="text-9xl md:text-4xl text-blue-500 font-bold mb-4 ">Blog Posts</h1>
+        
+      </div>
+    </section>
   <div class="container mx-auto py-8">
-    <h1 class="text-3xl font-bold mb-6 text-center">Blog</h1>
+    <h1 class="text-3xl font-bold mb-6 text-center"></h1>
     <div v-if="loading" class="text-center">Loading...</div>
     <div v-else>
       <div v-for="post in posts" :key="post.timestamp" class="mb-8 p-6 border rounded shadow bg-white">
