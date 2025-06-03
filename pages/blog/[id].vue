@@ -23,10 +23,26 @@ function formatDate(ts: string) {
 }
 
 onMounted(async () => {
-  const res = await fetch('/sampleblog.json')
-  const posts = await res.json()
-  post.value = posts.find((p: any) => encodeURIComponent(p.timestamp) === route.params.id)
-  loading.value = false
+  try {
+    console.log('Blog detail page mounted.')
+    console.log('Route params ID:', route.params.id)
+    const res = await fetch('/sampleblog.json')
+    console.log('Fetch response status:', res.status)
+    if (!res.ok) {
+      throw new Error(`HTTP error! status: ${res.status}`)
+    }
+    const posts = await res.json()
+    console.log('Fetched posts data:', posts)
+    const postId = decodeURIComponent(route.params.id as string)
+    console.log('Decoded Post ID for matching:', postId)
+    post.value = posts.find((p: any) => p.timestamp === postId)
+    console.log('Result of find operation (post.value):', post.value)
+  } catch (error) {
+    console.error('Failed to fetch or find blog post:', error)
+  } finally {
+    loading.value = false
+    console.log('Loading finished.')
+  }
 })
 </script>
 
