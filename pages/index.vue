@@ -4,8 +4,8 @@
     <section class="hero-section animate-fade-in-up">
       <div class="container mx-auto py-12 flex flex-col items-center text-center">
         <img src="https://ui-avatars.com/api/?name=John+Franklin+Tamakloe&background=0D8ABC&color=fff&size=128" alt="JFK Avatar" class="rounded-full shadow-lg mb-6 animate-pop-in" width="128" height="128" />
-        <h1 class="text-4xl md:text-5xl font-bold mb-4 text-blue-800">Hi, I'm John Franklin Tamakloe</h1>
-        <p class="text-lg md:text-xl text-gray-700 mb-6 max-w-2xl">Welcome to my personal blog where I share reflections, stories, and lessons from my journey of faith, life, and learning. Join me as we explore unity, purpose, and the beauty of everyday moments.</p>
+        <h1 class="text-4xl md:text-5xl font-bold mb-4 text-blue-800">Hi, I'm John Tamakloe</h1>
+        <p class="text-lg md:text-xl text-gray-700 mb-6 max-w-2xl">Welcome to my personal website! Here, you'll find where I share reflections, stories, and lessons from my journey of faith, life, and learning. Join me as we explore practical Christianity, unity, purpose, and the beauty of everyday moments.</p>
         <NuxtLink to="/blog" class="cta-btn">Read Latest Posts</NuxtLink>
       </div>
     </section>

@@ -6,7 +6,7 @@
         <div class="flex">
           <!-- Logo/Home Link -->
           <NuxtLink to="/" class="flex-shrink-0 flex items-center">
-            <span class="text-xl font-bold text-gray-800">My Blog</span>
+            <span class="text-xl font-bold text-gray-800">John Tamakloe (Evangelist)</span>
           </NuxtLink>
           
           <!-- Navigation Links -->
