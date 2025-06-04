@@ -20,8 +20,6 @@ jobs:
         run: echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
       - name: Build with base URL
         run: NUXT_APP_BASE_URL=/${{ env.REPO_NAME }}/ yarn generate --preset github_pages
-      
-      - run: yarn build --preset github_pages
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
