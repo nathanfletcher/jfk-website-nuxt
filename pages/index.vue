@@ -31,7 +31,7 @@
     <section id="about" class="bg-blue-50 animate-fade-in-up">
       <div class="container mx-auto max-w-3xl text-center">
         <h2 class="text-4xl md:text-5xl text-blue-500 font-bold mb-4 py-5">About Me</h2>
-        <p class="text-lg text-gray-700">I'm a lifelong learner, teacher, and believer in the power of community. Through this blog, I hope to inspire thoughtful conversations and encourage others to grow in faith and kindness.</p>
+        <p class="text-lg text-gray-700">I'm a lifelong learner, teacher, and believer in the power of Jesus Christ and community. Through this blog, I hope to inspire thoughtful conversations and encourage others to grow in faith and kindness.</p>
       </div>
     </section>
 
@@ -40,7 +40,7 @@
       <div class="container mx-auto max-w-2xl text-center">
         <h2 class="text-4xl md:text-5xl text-blue-500 font-bold mb-4">Contact</h2>
         <p class="text-lg text-gray-700 mb-4">Have a question or want to connect? Reach out below!</p>
-        <a href="mailto:jfk@example.com" class="cta-btn">Email Me</a>
+        <a href="mailto:contact@johntamakloe.com" class="cta-btn">Email Me</a>
       </div>
     </section>
 
