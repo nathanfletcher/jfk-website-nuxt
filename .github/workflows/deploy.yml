@@ -16,6 +16,11 @@ jobs:
           node-version: "20"
       # Pick your own package manager and build script
       - run: yarn install
+      - name: Set repo name as BASE_URL
+        run: echo "REPO_NAME=${GITHUB_REPOSITORY##*/}" >> $GITHUB_ENV
+      - name: Build with base URL
+        run: NUXT_APP_BASE_URL=/${{ env.REPO_NAME }}/ yarn build --preset github_pages
+      
       - run: yarn build --preset github_pages
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
