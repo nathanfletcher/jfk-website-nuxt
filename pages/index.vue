@@ -2,13 +2,14 @@
   <div>
         <!-- Hero Section -->
     <section class="hero-section animate-fade-in-up bg-[url(/assets/images/jt-hero-1.jpg)] bg-cover bg-center flex items-end min-h-[60vh]">
-      <div class="container mx-auto items-start  backdrop-blur-sm shadow-lg mb-8 pl-25 pt-5 pb-10 md:text-left">
+      
+    </section>
+    <div class="container mx-auto items-start backdrop-blur-sm shadow-lg pl-5 pt-5 md:text-left">
         <!-- <img src="https://ui-avatars.com/api/?name=John+Franklin+Tamakloe&background=0D8ABC&color=fff&size=128" alt="JFK Avatar" class="rounded-full shadow-lg mb-6 animate-pop-in" width="128" height="128" /> -->
         <h1 class="text-4xl md:text-5xl text-blue-500 font-bold mb-4 ">Hello, I'm John Tamakloe (Evangelist)</h1>
         <p class="text-lg md:text-xl text-gray-700 mb-6 max-w-2xl">Welcome to my personal website! Here, you'll find where I share reflections, stories, and lessons from my journey of faith, life, and learning. Join me as we explore practical Christianity, unity, purpose, and the beauty of everyday moments.</p>
         <NuxtLink to="/blog" class="cta-btn">Read Latest Posts</NuxtLink>
       </div>
-    </section>
 
     <!-- Latest Blog Posts Section -->
     <section class="container mx-auto py-10 animate-fade-in">
@@ -23,18 +24,21 @@
       </div>
     </section>
 
+<section
+  class="aboutPicture animate-fade-in-up bg-[url(/assets/images/jt-hero-3.jpg)] bg-cover  min-h-[200px] sm:min-h-[300px] md:min-h-[400px] w-full">
+</section>
     <!-- About Section -->
-    <section id="about" class="bg-blue-50 py-12 animate-fade-in-up">
+    <section id="about" class="bg-blue-50 animate-fade-in-up">
       <div class="container mx-auto max-w-3xl text-center">
-        <h2 class="text-3xl font-bold mb-4 text-blue-700">About Me</h2>
+        <h2 class="text-4xl md:text-5xl text-blue-500 font-bold mb-4 py-5">About Me</h2>
         <p class="text-lg text-gray-700">I'm a lifelong learner, teacher, and believer in the power of community. Through this blog, I hope to inspire thoughtful conversations and encourage others to grow in faith and kindness.</p>
       </div>
     </section>
 
     <!-- Contact Section -->
-    <section id="contact" class="py-12 animate-fade-in">
+    <section id="contact" class="animate-fade-in py-5">
       <div class="container mx-auto max-w-2xl text-center">
-        <h2 class="text-3xl font-bold mb-4 text-blue-700">Contact</h2>
+        <h2 class="text-4xl md:text-5xl text-blue-500 font-bold mb-4">Contact</h2>
         <p class="text-lg text-gray-700 mb-4">Have a question or want to connect? Reach out below!</p>
         <a href="mailto:jfk@example.com" class="cta-btn">Email Me</a>
       </div>
