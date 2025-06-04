@@ -23,6 +23,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { useRuntimeConfig } from '#imports'
+
 const posts = ref<Array<{ timestamp: string; sender: string; title: string; text: string }>>([])
 const loading = ref(true)
 
@@ -31,7 +33,10 @@ function formatDate(ts: string) {
 }
 
 onMounted(async () => {
-  const res = await fetch('/sampleblog.json')
+  const config = useRuntimeConfig()
+  const base = config.app.baseURL || '/'
+  const res = await fetch(`${base}sampleblog.json`)
+  
   posts.value = await res.json()
   loading.value = false
 })

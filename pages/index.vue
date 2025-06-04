@@ -46,6 +46,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
+import { useRuntimeConfig } from '#imports'
 
 interface BlogPost {
   timestamp: string;
@@ -68,9 +69,10 @@ function formatDate(ts: string) {
 
 onMounted(async () => {
   try {
-    console.log('Attempting to fetch blog posts...');
-    const res = await fetch('/sampleblog.json');
-    console.log('Fetch response status:', res.status);
+    const config = useRuntimeConfig()
+    const base = config.app.baseURL || '/'
+    const res = await fetch(`${base}sampleblog.json`)
+  
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);
     }

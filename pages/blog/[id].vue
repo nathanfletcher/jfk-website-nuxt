@@ -42,6 +42,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { marked } from 'marked';
+import { useRuntimeConfig } from '#imports'
 
 const route = useRoute()
 const post = ref<{ timestamp: string; sender: string; title: string; text: string } | null>(null)
@@ -61,10 +62,10 @@ const renderedText = computed(() => {
 
 onMounted(async () => {
   try {
-    console.log('Blog detail page mounted.')
-    console.log('Route params ID:', route.params.id)
-    const res = await fetch('/sampleblog.json')
-    console.log('Fetch response status:', res.status)
+    const config = useRuntimeConfig()
+    const base = config.app.baseURL || '/'
+    const res = await fetch(`${base}sampleblog.json`)
+    
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`)
     }
