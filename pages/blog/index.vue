@@ -36,8 +36,8 @@ onMounted(async () => {
   const config = useRuntimeConfig()
   const base = config.app.baseURL || '/'
   const res = await fetch(`${base}sampleblog.json`)
-  
-  posts.value = await res.json()
+  const data = await res.json() as Array<{ timestamp: string; sender: string; title: string; text: string }>
+  posts.value = data.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
   loading.value = false
 })
 </script>
