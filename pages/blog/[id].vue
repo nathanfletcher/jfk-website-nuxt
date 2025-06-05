@@ -41,20 +41,49 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { marked } from 'marked';
+import  MarkdownIt  from 'markdown-it';
 import { useRuntimeConfig } from '#imports'
 
 const route = useRoute()
 const post = ref<{ timestamp: string; sender: string; title: string; text: string } | null>(null)
 const loading = ref(true)
 
+const md = new MarkdownIt({
+  html: true,
+  linkify: true,
+  typographer: true,
+  breaks: true,
+});
+
 function formatDate(ts: string) {
   return new Date(ts).toLocaleDateString()
 }
 
+// Converts WhatsApp-style markdown to standard markdown
+function whatsappToMarkdown(text: string): string {
+  // Bold: *text* => **text** (but not inside a word)
+  text = text.replace(/(^|\W)\*(\S[^*]*\S)\*(?=\W|$)/g, '$1**$2**');
+  // Italic: _text_ => *text* (but not inside a word)
+  text = text.replace(/(^|\W)_(\S[^_]*\S)_(?=\W|$)/g, '$1*$2*');
+  // Strikethrough: ~text~ => ~~text~~
+  text = text.replace(/(^|\W)~(\S[^~]*\S)~(?=\W|$)/g, '$1~~$2~~');
+  // Monospace: ```text``` => ```text```
+  text = text.replace(/```([\s\S]*?)```/g, function(_, code) {
+    return '```' + code + '```';
+  });
+  // Inline code: `text` => `text` (already markdown)
+  // Bulleted list: * item or - item (normalize to - )
+  text = text.replace(/^(\s*)([\*-])\s+/gm, '$1- ');
+  // Numbered list: 1. item (already markdown)
+  // Block quote: > text (already markdown, but normalize extra spaces)
+  text = text.replace(/^>\s+/gm, '> ');
+  return text;
+}
+
 const renderedText = computed(() => {
   if (post.value && post.value.text) {
-    return marked(post.value.text);
+    const mdText = whatsappToMarkdown(post.value.text);
+    return md.render(mdText.replace(/\n/g, '<br>'));
   } else {
     return '';
   }
