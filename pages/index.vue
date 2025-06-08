@@ -51,6 +51,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRuntimeConfig } from '#imports'
+import { useHead } from '@unhead/vue'
 
 interface BlogPost {
   timestamp: string;
@@ -92,6 +93,22 @@ onMounted(async () => {
     loading.value = false;
     console.log('Loading finished.');
   }
+})
+
+useHead({
+  title: "John Tamakloe (Evangelist) | Personal Website & Blog",
+  meta: [
+    { name: 'description', content: "Welcome to my personal website! Here, you'll find where I share reflections, stories, and lessons from my journey of faith, life, and learning. Join me as we explore practical Christianity, unity, purpose, and the beauty of everyday moments." },
+    { property: 'og:title', content: "John Tamakloe (Evangelist) | Personal Website & Blog" },
+    { property: 'og:description', content: "Welcome to my personal website! Here, you'll find where I share reflections, stories, and lessons from my journey of faith, life, and learning. Join me as we explore practical Christianity, unity, purpose, and the beauty of everyday moments." },
+    { property: 'og:type', content: 'website' },
+    { property: 'og:url', content: typeof window !== 'undefined' ? window.location.href : '' },
+    { property: 'og:image', content: '/images/jt-hero-1.jpg' },
+    { name: 'twitter:card', content: 'summary_large_image' },
+    { name: 'twitter:title', content: "John Tamakloe (Evangelist) | Personal Website & Blog" },
+    { name: 'twitter:description', content: "Welcome to my personal website! Here, you'll find where I share reflections, stories, and lessons from my journey of faith, life, and learning. Join me as we explore practical Christianity, unity, purpose, and the beauty of everyday moments." },
+    { name: 'twitter:image', content: '/images/jt-hero-1.jpg' },
+  ]
 })
 </script>
 

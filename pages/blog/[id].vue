@@ -43,6 +43,7 @@ import { ref, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import  MarkdownIt  from 'markdown-it';
 import { useRuntimeConfig } from '#imports'
+import { useHead } from '@unhead/vue'
 
 const route = useRoute()
 const post = ref<{ timestamp: string; sender: string; title: string; text: string } | null>(null)
@@ -94,16 +95,30 @@ onMounted(async () => {
     const config = useRuntimeConfig()
     const base = config.app.baseURL || '/'
     const res = await fetch(`${base}sampleblog.json`)
-    
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`)
     }
     const posts = await res.json()
-    console.log('Fetched posts data:', posts)
     const postId = decodeURIComponent(route.params.id as string)
-    console.log('Decoded Post ID for matching:', postId)
     post.value = posts.find((p: any) => p.timestamp === postId)
-    console.log('Result of find operation (post.value):', post.value)
+    // Set SEO meta tags if post found
+    if (post.value) {
+      useHead({
+        title: post.value.title + ' | JFK Blog',
+        meta: [
+          { name: 'description', content: post.value.text.split('\n').slice(0, 2).join(' ') },
+          { property: 'og:title', content: post.value.title },
+          { property: 'og:description', content: post.value.text.split('\n').slice(0, 2).join(' ') },
+          { property: 'og:type', content: 'article' },
+          { property: 'og:url', content: typeof window !== 'undefined' ? window.location.href : '' },
+          { property: 'og:image', content: base + 'images/jt-hero-2.jpg' },
+          { name: 'twitter:card', content: 'summary_large_image' },
+          { name: 'twitter:title', content: post.value.title },
+          { name: 'twitter:description', content: post.value.text.split('\n').slice(0, 2).join(' ') },
+          { name: 'twitter:image', content: base + 'images/jt-hero-2.jpg' },
+        ]
+      })
+    }
   } catch (error) {
     console.error('Failed to fetch or find blog post:', error)
   } finally {
