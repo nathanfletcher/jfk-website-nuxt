@@ -11,11 +11,11 @@
     <h1 class="text-3xl font-bold mb-6 text-center"></h1>
     <div v-if="loading" class="text-center">Loading...</div>
     <div v-else>
-      <div v-for="post in posts" :key="post.timestamp" class="mb-8 p-6 border rounded shadow bg-white">
-        <NuxtLink :to="`/blog/${encodeURIComponent(post.timestamp)}`" class="text-2xl font-semibold text-blue-700 hover:underline">{{ post.title }}</NuxtLink>
-        <div class="text-gray-500 text-sm mb-2">By {{ post.sender }} | {{ formatDate(post.timestamp) }}</div>
-        <p class="line-clamp-4 text-gray-700">{{ post.text.split('\n').slice(0, 3).join(' ') }}...</p>
-        <NuxtLink :to="`/blog/${encodeURIComponent(post.timestamp)}`" class="text-blue-500 hover:underline mt-2 inline-block">Read more</NuxtLink>
+      <div v-for="post in posts" :key="post.publishedAt" class="mb-8 p-6 border rounded shadow bg-white">
+        <NuxtLink :to="`/blog/${encodeURIComponent(post.slug)}`" class="text-2xl font-semibold text-blue-700 hover:underline">{{ post.title }}</NuxtLink>
+        <div class="text-gray-500 text-sm mb-2">By John Tamakloe | {{ formatDate(post.publishedAt) }}</div>
+        <p class="line-clamp-4 text-gray-700">{{ stripHtml(post.text.split('\n').slice(0, 3).join(' ')) }}...</p>
+        <NuxtLink :to="`/blog/${encodeURIComponent(post.publishedAt)}`" class="text-blue-500 hover:underline mt-2 inline-block">Read more</NuxtLink>
       </div>
     </div>
   </div>
@@ -25,19 +25,31 @@
 import { ref, onMounted } from 'vue'
 import { useRuntimeConfig } from '#imports'
 
-const posts = ref<Array<{ timestamp: string; sender: string; title: string; text: string }>>([])
+const posts = ref<Array<{slug: string; id: number; publishedAt: string; title: string; text: string }>>([])
 const loading = ref(true)
 
 function formatDate(ts: string) {
   return new Date(ts).toLocaleDateString()
 }
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '');
+}
+
 onMounted(async () => {
   const config = useRuntimeConfig()
-  const base = config.app.baseURL || '/'
-  const res = await fetch(`${base}sampleblog.json`)
-  const data = await res.json() as Array<{ timestamp: string; sender: string; title: string; text: string }>
-  posts.value = data.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+  // const base = config.app.baseURL || '/'
+  const res = await fetch(`https://reliable-bubble-e0aafb3b9e.strapiapp.com/api/blog-posts/`, {
+    headers: {
+      'Content-Type': 'application/json',
+    }
+  })
+  const data = await res.json()
+  if (!Array.isArray(data.data)) {
+    loading.value = false
+    return
+  }
+  posts.value = (data.data as Array<{slug: string; id: number; publishedAt: string; title: string; text: string}>).sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
   loading.value = false
 })
 </script>

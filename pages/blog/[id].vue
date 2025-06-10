@@ -94,13 +94,30 @@ onMounted(async () => {
   try {
     const config = useRuntimeConfig()
     const base = config.app.baseURL || '/'
-    const res = await fetch(`${base}sampleblog.json`)
+    
+    const postId = decodeURIComponent(route.params.id as string)
+
+    //const res = await fetch(`${base}sampleblog.json`)
+    const res = await fetch(`https://reliable-bubble-e0aafb3b9e.strapiapp.com/api/blog-posts/`, {
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    })
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`)
     }
-    const posts = await res.json()
-    const postId = decodeURIComponent(route.params.id as string)
-    post.value = posts.find((p: any) => p.timestamp === postId)
+    let posts = await res.json()
+    if (!Array.isArray(posts.data)) {
+      console.error('Invalid data format:', posts)
+      return
+    }
+    //Find post by slug
+    const postFound = posts.data.find((p: any) => p.slug === postId || p.id === postId);
+    if (!postFound) {
+      console.error('Post not found with ID:', postId)
+      return
+    }
+    post.value = postFound;
     // Set SEO meta tags if post found
     if (post.value) {
       useHead({
