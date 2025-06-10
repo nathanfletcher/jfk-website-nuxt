@@ -28,9 +28,9 @@
     </section>
         
         <div class="text-gray-500 text-sm flex items-center gap-2">
-          <span>By {{ post.sender }}</span>
+          <span>By John Tamakloe</span>
           <span>&bull;</span>
-          <time :datetime="post.timestamp">{{ formatDate(post.timestamp) }}</time>
+          <time :datetime="post.publishshedAt">{{ formatDate(post.publishedAt) }}</time>
         </div>
       </div>
       <div class="prose prose-blue max-w-none" v-html="renderedText"></div>
@@ -46,7 +46,7 @@ import { useRuntimeConfig } from '#imports'
 import { useHead } from '@unhead/vue'
 
 const route = useRoute()
-const post = ref<{ timestamp: string; sender: string; title: string; text: string } | null>(null)
+const post = ref<{ timestamp: string; sender: string; title: string; text: string; publishedAt: string } | null>(null)
 const loading = ref(true)
 
 const md = new MarkdownIt({
