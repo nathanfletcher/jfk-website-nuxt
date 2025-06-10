@@ -14,7 +14,7 @@
       <div v-for="post in posts" :key="post.publishedAt" class="mb-8 p-6 border rounded shadow bg-white">
         <NuxtLink :to="`/blog/${encodeURIComponent(post.slug)}`" class="text-2xl font-semibold text-blue-700 hover:underline">{{ post.title }}</NuxtLink>
         <div class="text-gray-500 text-sm mb-2">By John Tamakloe | {{ formatDate(post.publishedAt) }}</div>
-        <p class="line-clamp-4 text-gray-700">{{ stripHtml(post.text.split('\n').slice(0, 3).join(' ')) }}...</p>
+        <p class="line-clamp-4 text-gray-700">{{ getFirstSentences(post.text, 2) }}...</p>
         <NuxtLink :to="`/blog/${encodeURIComponent(post.publishedAt)}`" class="text-blue-500 hover:underline mt-2 inline-block">Read more</NuxtLink>
       </div>
     </div>
@@ -34,6 +34,13 @@ function formatDate(ts: string) {
 
 function stripHtml(html: string): string {
   return html.replace(/<[^>]*>/g, '');
+}
+
+function getFirstSentences(text: string, count = 2): string {
+  const plain = stripHtml(text);
+  // Match up to `count` sentences (ends with . ! or ?)
+  const match = plain.match(new RegExp(`(([^.!?]*[.!?]){1,${count}})`));
+  return match ? match[0].trim() : plain.split('\n').slice(0, count).join(' ');
 }
 
 onMounted(async () => {

@@ -90,6 +90,17 @@ const renderedText = computed(() => {
   }
 });
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '');
+}
+
+function getFirstSentences(text: string, count = 2): string {
+  const plain = stripHtml(text);
+  // Match up to `count` sentences (ends with . ! or ?)
+  const match = plain.match(new RegExp(`(([^.!?]*[.!?]){1,${count}})`));
+  return match ? match[0].trim() : plain.split('\n').slice(0, count).join(' ');
+}
+
 onMounted(async () => {
   try {
     const config = useRuntimeConfig()
@@ -123,15 +134,16 @@ onMounted(async () => {
       useHead({
         title: post.value.title + ' | JFK Blog',
         meta: [
-          { name: 'description', content: post.value.text.split('\n').slice(0, 2).join(' ') },
+          { name: 'description', content: getFirstSentences(post.value.text, 2) },
           { property: 'og:title', content: post.value.title },
-          { property: 'og:description', content: post.value.text.split('\n').slice(0, 2).join(' ') },
+          { property: 'og:description', content: getFirstSentences(post.value.text, 2) },
+          { property: 'og:site_name', content: 'John Tamakloe (Evangelist)' },
           { property: 'og:type', content: 'article' },
           { property: 'og:url', content: typeof window !== 'undefined' ? window.location.href : '' },
           { property: 'og:image', content: base + 'images/jt-hero-2.jpg' },
           { name: 'twitter:card', content: 'summary_large_image' },
           { name: 'twitter:title', content: post.value.title },
-          { name: 'twitter:description', content: post.value.text.split('\n').slice(0, 2).join(' ') },
+          { name: 'twitter:description', content: getFirstSentences(post.value.text, 2) },
           { name: 'twitter:image', content: base + 'images/jt-hero-2.jpg' },
         ]
       })
