@@ -50,8 +50,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRuntimeConfig, useHead } from '#imports'
+import { ref, onMounted, computed } from 'vue'
+import { useRuntimeConfig } from '#imports'
+import { useHead } from '@unhead/vue'
 
 interface BlogPost {
   title: string;
@@ -62,6 +63,12 @@ interface BlogPost {
 
 const posts = ref<BlogPost[]>([])
 const loading = ref(true)
+
+// This function will be used in a later feature to fetch the latest blog posts from locally stored data.
+const latestPosts = computed(() => {
+  // Sort posts by timestamp in descending order and take the first 3
+  return posts.value.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3);
+})
 
 function formatDate(ts: string) {
   return new Date(ts).toLocaleDateString()
@@ -82,13 +89,8 @@ onMounted(async () => {
   try {
     const config = useRuntimeConfig()
     const base = config.app.baseURL || '/'
-    // const res = await fetch(`https://reliable-bubble-e0aafb3b9e.strapiapp.com/api/blog-posts?sort=createdAt:desc`)
-    // http://localhost:1337
-    const res = await fetch(`http://localhost:1337/api/blog-posts?sort=createdAt:desc`, {
-      headers: {
-        'Content-Type': 'application/json',
-      }
-    })
+    const res = await fetch(`https://reliable-bubble-e0aafb3b9e.strapiapp.com/api/blog-posts?sort=createdAt:desc`)
+  
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);
     }
@@ -97,6 +99,7 @@ onMounted(async () => {
     posts.value = data.data.slice(0, 3);
     console.log('Fetched data:', data);
     console.log('Posts after assignment:', posts.value);
+    console.log('Latest posts computed:', latestPosts.value);
   } catch (error) {
     console.error('Failed to fetch blog posts:', error);
     // Optionally set an error state to display to the user
