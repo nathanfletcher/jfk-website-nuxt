@@ -16,11 +16,12 @@
       <h2 class="text-3xl font-bold mb-6 text-center text-blue-800">Latest Posts</h2>
       <div v-if="loading" class="text-center">Loading latest posts...</div>
       <div v-else class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-        <NuxtLink v-for="post in latestPosts" :key="post.timestamp" :to="`/blog/${encodeURIComponent(post.timestamp)}`" class="card block">
-          <h3 class="card-title text-xl">{{ post.title }}</h3>
-          <div class="text-gray-500 text-sm mb-2">By {{ post.sender }} | {{ formatDate(post.timestamp) }}</div>
-          <p class="text-gray-700 line-clamp-3">{{ post.text.split('\n').slice(0, 3).join(' ') }}...</p>
-        </NuxtLink>
+        <div v-for="post in posts" :key="post.publishedAt" class="card block">
+        <NuxtLink :to="`/blog/${encodeURIComponent(post.slug)}`" class="text-2xl font-semibold text-blue-700 hover:underline">{{ post.title }}</NuxtLink>
+        <div class="text-gray-500 text-sm mb-2">By John Tamakloe | {{ formatDate(post.publishedAt) }}</div>
+        <p class="line-clamp-4 text-gray-700">{{ getFirstSentences(post.text, 2) }}...</p>
+        <NuxtLink :to="`/blog/${encodeURIComponent(post.slug)}`" class="text-blue-500 hover:underline mt-2 inline-block">Read more</NuxtLink>
+      </div>
       </div>
     </section>
 
@@ -54,10 +55,10 @@ import { useRuntimeConfig } from '#imports'
 import { useHead } from '@unhead/vue'
 
 interface BlogPost {
-  timestamp: string;
-  sender: string;
   title: string;
+  slug: string;
   text: string;
+  publishedAt: string;
 }
 
 const posts = ref<BlogPost[]>([])
@@ -72,18 +73,30 @@ function formatDate(ts: string) {
   return new Date(ts).toLocaleDateString()
 }
 
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '');
+}
+
+function getFirstSentences(text: string, count = 2): string {
+  const plain = stripHtml(text);
+  // Match up to `count` sentences (ends with . ! or ?)
+  const match = plain.match(new RegExp(`(([^.!?]*[.!?]){1,${count}})`));
+  return match ? match[0].trim() : plain.split('\n').slice(0, count).join(' ');
+}
+
 onMounted(async () => {
   try {
     const config = useRuntimeConfig()
     const base = config.app.baseURL || '/'
-    const res = await fetch(`${base}sampleblog.json`)
+    const res = await fetch(`https://reliable-bubble-e0aafb3b9e.strapiapp.com/api/blog-posts?sort=createdAt:desc`)
   
     if (!res.ok) {
       throw new Error(`HTTP error! status: ${res.status}`);
     }
     const data = await res.json();
+    
+    posts.value = data.data.slice(0, 3);
     console.log('Fetched data:', data);
-    posts.value = data;
     console.log('Posts after assignment:', posts.value);
     console.log('Latest posts computed:', latestPosts.value);
   } catch (error) {

@@ -15,7 +15,7 @@
         <NuxtLink :to="`/blog/${encodeURIComponent(post.slug)}`" class="text-2xl font-semibold text-blue-700 hover:underline">{{ post.title }}</NuxtLink>
         <div class="text-gray-500 text-sm mb-2">By John Tamakloe | {{ formatDate(post.publishedAt) }}</div>
         <p class="line-clamp-4 text-gray-700">{{ getFirstSentences(post.text, 2) }}...</p>
-        <NuxtLink :to="`/blog/${encodeURIComponent(post.publishedAt)}`" class="text-blue-500 hover:underline mt-2 inline-block">Read more</NuxtLink>
+        <NuxtLink :to="`/blog/${encodeURIComponent(post.slug)}`" class="text-blue-500 hover:underline mt-2 inline-block">Read more</NuxtLink>
       </div>
     </div>
   </div>
@@ -46,7 +46,7 @@ function getFirstSentences(text: string, count = 2): string {
 onMounted(async () => {
   const config = useRuntimeConfig()
   // const base = config.app.baseURL || '/'
-  const res = await fetch(`https://reliable-bubble-e0aafb3b9e.strapiapp.com/api/blog-posts/`, {
+  const res = await fetch(`https://reliable-bubble-e0aafb3b9e.strapiapp.com/api/blog-posts?sort=createdAt:desc`, {
     headers: {
       'Content-Type': 'application/json',
     }

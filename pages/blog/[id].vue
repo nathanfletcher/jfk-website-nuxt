@@ -44,6 +44,7 @@ import { useRoute } from 'vue-router'
 import  MarkdownIt  from 'markdown-it';
 import { useRuntimeConfig } from '#imports'
 import { useHead } from '@unhead/vue'
+import qs from 'qs'
 
 const route = useRoute()
 const post = ref<{ timestamp: string; sender: string; title: string; text: string; publishedAt: string } | null>(null)
@@ -108,8 +109,24 @@ onMounted(async () => {
     
     const postId = decodeURIComponent(route.params.id as string)
 
+ 
+    const query = qs.stringify({
+      filters: {
+        slug: {
+          $eq: postId, // Match by slug or ID
+        },
+      },
+    }, {
+      encodeValuesOnly: true, // prettify URL
+    });
+
+    // Use a request function to fetch users (if needed)
+    // const users =
+
+    //await request(`/api/users?${query}`);
+
     //const res = await fetch(`${base}sampleblog.json`)
-    const res = await fetch(`https://reliable-bubble-e0aafb3b9e.strapiapp.com/api/blog-posts/`, {
+    const res = await fetch(`https://reliable-bubble-e0aafb3b9e.strapiapp.com/api/blog-posts?${query}`, {
       headers: {
         'Content-Type': 'application/json',
       }
@@ -118,17 +135,20 @@ onMounted(async () => {
       throw new Error(`HTTP error! status: ${res.status}`)
     }
     let posts = await res.json()
+    console.log('Fetched posts:', posts)
     if (!Array.isArray(posts.data)) {
       console.error('Invalid data format:', posts)
       return
     }
     //Find post by slug
-    const postFound = posts.data.find((p: any) => p.slug === postId || p.id === postId);
+    /* const postFound = posts.data.find((p: any) => p.slug === postId || p.id === postId);
     if (!postFound) {
       console.error('Post not found with ID:', postId)
       return
-    }
-    post.value = postFound;
+    }*/
+    post.value = posts.data[0] || null; // Use the first post if multiple found
+    console.log('Post found:', post.value)
+    
     // Set SEO meta tags if post found
     if (post.value) {
       useHead({
