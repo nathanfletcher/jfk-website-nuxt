@@ -22,5 +22,10 @@ export default defineNuxtConfig({
     configPath: '~/tailwind.config.ts',
     exposeConfig: false,
     viewer: true
+  },
+  nitro:{
+    prerender: {
+      routes: ['/sitemap.xml'],
+    }
   }
 })
