@@ -5,7 +5,7 @@
     </nav>
     <h3 class="text-lg font-bold mb-2">Post Preview</h3>
     <div class="preview-box mt-4 p-3 bg-white border rounded shadow">
-      <h4 class="font-bold mb-2 text-lg break-words whitespace-pre-line">{{ $route.query.title }}</h4>
+      <h4 class="font-bold mb-2">{{ $route.query.title }}</h4>
       <div v-html="$route.query.text"></div>
     </div>
   </div>
@@ -27,10 +27,5 @@ const router = useRouter()
   border: 1px solid #e0e7ef;
   border-radius: 0.5rem;
   background: #f9fafb;
-}
-h4 {
-  word-break: break-word;
-  white-space: pre-line;
-  font-size: 1.25rem;
 }
 </style>

@@ -7,7 +7,7 @@
     <h3 class="text-lg font-bold mb-2">{{ isEdit ? 'Edit Post' : 'New Post' }}</h3>
     <form v-if="ready" @submit.prevent="savePost">
       <label class="block mb-2">
-        <span class="text-base font-semibold">Title</span>
+        <div class="text-base font-semibold">Title</div>
         <input v-model="form.title" @input="onTitleInput" type="text" placeholder="Title" class="input mb-1 text-xl font-bold" required />
       </label>
       <div class="mb-3 text-sm text-gray-500">
@@ -22,16 +22,41 @@
           class="input mb-2 ck-editor-wrapper"
         />
       </client-only>
-      <div class="flex gap-2 mb-2">
-        <button type="button" class="btn-secondary flex-1" @click="saveDraft">Save Draft</button>
-        <button type="button" class="btn-secondary flex-1" @click="loadDraft">Load Draft</button>
-        <button type="button" class="btn-secondary flex-1" @click="clearDraft">Clear Draft</button>
+      
+      <button type="button" class="btn-preview w-full mb-2" @click="goToPreview">👁️ Preview</button>
+      <button type="submit" class="btn-primary w-full" :disabled="saving">{{ saving ? 'Saving...' : (isEdit ? 'Update Article' : 'Post Article') }}</button>
+      <button v-if="isEdit" type="button" class="btn-danger w-full mt-2" @click="showDeleteConfirm = true">🗑️ Delete</button>
+      <button type="button" class="btn-secondary w-full mt-2" @click="showCancelConfirm = true">Cancel</button>
+
+      <div class="flex flex-col sm:flex-row gap-2 mb-4">
+        <button type="button" class="btn-draft flex-1" @click="saveDraft">💾 Save Draft to Phone</button>
+        <button type="button" class="btn-draft flex-1" @click="loadDraft">📥 Load Draft from Phone</button>
+        <button type="button" class="btn-draft flex-1" @click="clearDraft">🗑️ Clear Draft</button>
       </div>
-      <button type="button" class="btn-secondary w-full mb-2" @click="goToPreview">Preview</button>
-      <button type="submit" class="btn-primary w-full" :disabled="saving">{{ saving ? 'Saving...' : (isEdit ? 'Update' : 'Create') }}</button>
-      <button v-if="isEdit" type="button" class="btn-secondary w-full mt-2" @click="deletePost">Delete</button>
-      <button type="button" class="btn-secondary w-full mt-2" @click="cancelEdit">Cancel</button>
     </form>
+
+    <!-- Delete Confirmation Modal -->
+    <div v-if="showDeleteConfirm" class="modal-overlay">
+      <div class="modal-box">
+        <h4 class="font-bold text-lg mb-2 text-red-600">Delete Post?</h4>
+        <p class="mb-4">Are you sure you want to permanently delete this post? This action cannot be undone.</p>
+        <div class="flex gap-2">
+          <button class="btn-danger flex-1" @click="deletePost">Yes, Delete</button>
+          <button class="btn-secondary flex-1" @click="showDeleteConfirm = false">Cancel</button>
+        </div>
+      </div>
+    </div>
+    <!-- Cancel Confirmation Modal -->
+    <div v-if="showCancelConfirm" class="modal-overlay">
+      <div class="modal-box">
+        <h4 class="font-bold text-lg mb-2">Cancel Editing?</h4>
+        <p class="mb-4">Are you sure you want to cancel? Unsaved changes will be lost.</p>
+        <div class="flex gap-2">
+          <button class="btn-danger flex-1" @click="cancelEdit">Yes, Cancel</button>
+          <button class="btn-secondary flex-1" @click="showCancelConfirm = false">Continue Editing</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -51,6 +76,8 @@ const form = ref({ title: '', slug: '', text: '' })
 const saving = ref(false)
 const editingPostId = ref(null)
 const ready = ref(false)
+const showDeleteConfirm = ref(false)
+const showCancelConfirm = ref(false)
 
 const API_URL = 'https://reliable-bubble-e0aafb3b9e.strapiapp.com/api'
 const token = ref<string | null>(null)
@@ -180,6 +207,15 @@ function slugify(text: string) {
 function onTitleInput() {
   form.value.slug = slugify(form.value.title);
 }
+
+// Autosave draft on edit
+watch(
+  () => form.value,
+  (newVal) => {
+    localStorage.setItem('jfk_blog_editor_draft', JSON.stringify(newVal))
+  },
+  { deep: true }
+)
 </script>
 
 <style scoped>
@@ -187,5 +223,68 @@ function onTitleInput() {
   max-width: 480px;
   margin: 0 auto;
   padding: 1rem;
+}
+.btn-draft {
+  background: #f1f5f9;
+  color: #2563eb;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  padding: 0.6rem 1.2rem;
+  border: 1px solid #cbd5e1;
+  transition: background 0.2s, color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.btn-draft:hover {
+  background: #e0e7ef;
+}
+.btn-preview {
+  background: linear-gradient(90deg, #38bdf8 0%, #2563eb 100%);
+  color: #fff;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  padding: 0.75rem 2rem;
+  box-shadow: 0 2px 8px rgba(56,189,248,0.10);
+  transition: background 0.2s, transform 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.btn-preview:hover {
+  background: linear-gradient(90deg, #2563eb 0%, #38bdf8 100%);
+}
+.btn-danger {
+  background: #fee2e2;
+  color: #dc2626;
+  font-weight: 700;
+  border-radius: 0.5rem;
+  padding: 0.75rem 2rem;
+  border: 1px solid #fecaca;
+  transition: background 0.2s, color 0.2s;
+}
+.btn-danger:hover {
+  background: #fecaca;
+  color: #b91c1c;
+}
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+.modal-box {
+  background: #fff;
+  border-radius: 0.75rem;
+  padding: 2rem 1.5rem;
+  box-shadow: 0 8px 32px rgba(37,99,235,0.13);
+  max-width: 90vw;
+  width: 350px;
+  text-align: center;
 }
 </style>
