@@ -1,11 +1,5 @@
 <template>
   <div class="editor-form-page">
-    <!-- Draft Saved Indicator (Top Fixed, always visible when draftSaved) -->
-    <div v-if="draftSaved" class="fixed top-3 left-1/2 transform -translate-x-1/2 z-50 bg-green-600 text-white px-4 py-2 rounded shadow-lg flex items-center text-sm font-medium animate-bounce-in pointer-events-none">
-      <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-      Draft saved
-    </div>
-
     <nav class="editor-nav flex justify-between items-center mb-4 p-2 bg-blue-600 text-white rounded-lg shadow">
       <NuxtLink to="/editor" class="font-bold text-lg">Back to Editor</NuxtLink>
       <button class="btn-secondary" @click="logout">Logout</button>
@@ -28,7 +22,7 @@
           class="input mb-2 ck-editor-wrapper"
         />
       </client-only>
-
+      
       <button type="button" class="btn-preview w-full mb-2" @click="goToPreview">👁️ Preview</button>
       <button type="submit" class="btn-primary w-full mb-2 btn-article" :disabled="saving">
         <span v-if="saving" class="animate-spin mr-2">⏳</span>
@@ -106,8 +100,6 @@ const articleUrl = ref('')
 
 const API_URL = 'https://reliable-bubble-e0aafb3b9e.strapiapp.com/api'
 const token = ref<string | null>(null)
-const draftSaved = ref(false)
-let draftSavedTimeout: ReturnType<typeof setTimeout> | null = null
 
 onMounted(async () => {
   if (process.client) {
@@ -264,8 +256,6 @@ watch(
   () => form.value,
   (newVal) => {
     localStorage.setItem('jfk_blog_editor_draft', JSON.stringify(newVal))
-    draftSaved.value = true
-    // Do not set a timeout to hide the indicator
   },
   { deep: true }
 )
@@ -385,22 +375,5 @@ watch(
   border: 2px solid #38bdf8;
   background: #fff;
   box-shadow: 0 2px 8px rgba(56,189,248,0.13);
-}
-.fade-enter-active, .fade-leave-active {
-  transition: opacity 0.3s;
-}
-.fade-enter-from, .fade-leave-to {
-  opacity: 0;
-}
-.fade-enter-to, .fade-leave-from {
-  opacity: 1;
-}
-@keyframes bounce-in {
-  0% { transform: scale(0.9) translateY(-10px); opacity: 0; }
-  60% { transform: scale(1.05) translateY(2px); opacity: 1; }
-  100% { transform: scale(1) translateY(0); opacity: 1; }
-}
-.animate-bounce-in {
-  animation: bounce-in 0.4s;
 }
 </style>
