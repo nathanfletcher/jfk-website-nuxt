@@ -10,6 +10,8 @@
     "postinstall": "nuxt prepare"
   },
   "dependencies": {
+    "@ckeditor/ckeditor5-build-classic": "^41.4.2",
+    "@ckeditor/ckeditor5-vue": "^7.3.0",
     "@nuxt/content": "3.5.1",
     "@nuxt/eslint": "1.4.1",
     "@nuxt/icon": "1.13.0",

@@ -64,9 +64,10 @@ interface BlogPost {
 const posts = ref<BlogPost[]>([])
 const loading = ref(true)
 
+// This function will be used in a later feature to fetch the latest blog posts from locally stored data.
 const latestPosts = computed(() => {
   // Sort posts by timestamp in descending order and take the first 3
-  return posts.value.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, 3);
+  return posts.value.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3);
 })
 
 function formatDate(ts: string) {
