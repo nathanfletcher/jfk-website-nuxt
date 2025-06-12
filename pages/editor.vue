@@ -31,7 +31,7 @@
       <div v-else>
         <div v-for="post in filteredPosts" :key="post.id" class="post-list-item" @click="editPost(post)">
           <div class="font-semibold">{{ post.title }}</div>
-          <div class="text-xs text-gray-500">{{ formatDate(post.publishedAt) }}</div>
+          <div class="text-xs text-gray-500">{{ formatDate(post.createdAt) }}</div>
         </div>
       </div>
       <div v-if="showEditor" class="editor-form mt-6">
@@ -75,7 +75,7 @@ const password = ref('')
 const isAuthenticated = ref(false)
 const loading = ref(false)
 const error = ref('')
-const token = ref('')
+const token = ref<string | null>(null)
 const posts = ref<any[]>([])
 const filteredPosts = ref<any[]>([])
 const searchQuery = ref('')
@@ -91,9 +91,17 @@ const editorConfig = { toolbar: [ 'heading', '|', 'bold', 'italic', 'link', 'bul
 
 onMounted(async () => {
   if (process.client) {
-    const { default: CKEditorComponent } = await import('@ckeditor/ckeditor5-vue')
+    // Restore token and auth state from localStorage
+    const savedToken = localStorage.getItem('jfk_blog_editor_token')
+    if (savedToken) {
+      token.value = savedToken
+      isAuthenticated.value = true
+      await fetchPosts()
+    }
+    // Use named import for CKEditor Vue plugin
+    const { Ckeditor } = await import('@ckeditor/ckeditor5-vue')
     const { default: Classic } = await import('@ckeditor/ckeditor5-build-classic')
-    editor.value = CKEditorComponent
+    editor.value = Ckeditor
     ClassicEditor.value = Classic
   }
 })
@@ -110,26 +118,30 @@ async function login() {
       body: JSON.stringify({ identifier: identifier.value, password: password.value })
     })
     const data = await res.json()
-    console.log('Login response:', data)
-    // add a 30 second delay to simulate network latency
-    await new Promise(resolve => setTimeout(resolve, 30000))
     if (data.jwt) {
       token.value = data.jwt
-      //isAuthenticated.value = true
+      isAuthenticated.value = true
+      // Save token to localStorage for persistence
+      localStorage.setItem('jfk_blog_editor_token', data.jwt)
       await fetchPosts()
     } else {
       error.value = data.error?.message || 'Login failed'
     }
   } catch (e) {
-    //error.value = 'Login failed'
+    error.value = 'Login failed'
   } finally {
-    //loading.value = false
+    loading.value = false
   }
+}
+
+function formatDate(ts: string) {
+  return new Date(ts).toLocaleDateString()
 }
 
 function logout() {
   isAuthenticated.value = false
   token.value = ''
+  localStorage.removeItem('jfk_blog_editor_token')
   posts.value = []
   filteredPosts.value = []
   showEditor.value = false
@@ -143,6 +155,12 @@ async function fetchPosts() {
     const res = await fetch(`${API_URL}/blog-posts?sort=publishedAt:desc`, {
       headers: { Authorization: `Bearer ${token.value}` }
     })
+    if (res.status === 401) {
+      // Token expired or invalid
+      logout()
+      error.value = 'Session expired. Please log in again.'
+      return
+    }
     const data = await res.json()
     posts.value = data.data || []
     filteredPosts.value = posts.value
