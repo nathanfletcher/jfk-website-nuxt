@@ -24,9 +24,12 @@
       </client-only>
       
       <button type="button" class="btn-preview w-full mb-2" @click="goToPreview">👁️ Preview</button>
-      <button type="submit" class="btn-primary w-full" :disabled="saving">{{ saving ? 'Saving...' : (isEdit ? 'Update Article' : 'Post Article') }}</button>
-      <button v-if="isEdit" type="button" class="btn-danger w-full mt-2" @click="showDeleteConfirm = true">🗑️ Delete</button>
-      <button type="button" class="btn-secondary w-full mt-2" @click="showCancelConfirm = true">Cancel</button>
+      <button type="submit" class="btn-primary w-full mb-2 btn-article" :disabled="saving">
+        <span v-if="saving" class="animate-spin mr-2">⏳</span>
+        <span v-else>{{ isEdit ? 'Update Article' : 'Post Article' }}</span>
+      </button>
+      <button type="button" class="btn-cancel w-full mt-2" @click="showCancelConfirm = true">Cancel Editing</button>
+      <button v-if="isEdit" type="button" class="btn-danger w-full mt-2" @click="showDeleteConfirm = true">🗑️ Delete Article</button>
 
       <div class="flex flex-col sm:flex-row gap-2 mb-4">
         <button type="button" class="btn-draft flex-1" @click="saveDraft">💾 Save Draft to Phone</button>
@@ -57,6 +60,20 @@
         </div>
       </div>
     </div>
+
+    <!-- Success Modal -->
+    <div v-if="showSuccessModal" class="modal-overlay">
+      <div class="modal-box">
+        <h4 class="font-bold text-lg mb-2 text-green-600">{{ isEdit ? 'Article Updated!' : 'Article Posted!' }}</h4>
+        <p class="mb-4">Your article was {{ isEdit ? 'updated' : 'posted' }} successfully.</p>
+        <div class="mb-2 break-all text-blue-700 underline text-sm">{{ articleUrl }}</div>
+        <div class="flex gap-2 mb-2">
+          <button class="btn-primary flex-1" @click="visitArticle">Visit Article</button>
+          <button class="btn-secondary flex-1" @click="copyLink">Copy Link</button>
+        </div>
+        <button class="btn-secondary w-full mt-2" @click="closeSuccessModal">Close</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -78,6 +95,8 @@ const editingPostId = ref(null)
 const ready = ref(false)
 const showDeleteConfirm = ref(false)
 const showCancelConfirm = ref(false)
+const showSuccessModal = ref(false)
+const articleUrl = ref('')
 
 const API_URL = 'https://reliable-bubble-e0aafb3b9e.strapiapp.com/api'
 const token = ref<string | null>(null)
@@ -143,11 +162,23 @@ function clearDraft() {
   localStorage.removeItem('jfk_blog_editor_draft')
 }
 
+function closeSuccessModal() { showSuccessModal.value = false }
+function visitArticle() { if (articleUrl.value) window.open(articleUrl.value, '_blank') }
+function copyLink() {
+  if (articleUrl.value) {
+    navigator.clipboard.writeText(articleUrl.value)
+    alert('Link copied!')
+  }
+}
+
 async function savePost() {
   saving.value = true
   try {
-    if (isEdit.value && editingPostId.value) {
-      await fetch(`${API_URL}/blog-posts/${editingPostId.value}`, {
+    let slug = form.value.slug
+    let postId = editingPostId.value
+    let success = false
+    if (isEdit.value && postId) {
+      const res = await fetch(`${API_URL}/blog-posts/${postId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -155,8 +186,9 @@ async function savePost() {
         },
         body: JSON.stringify({ data: { ...form.value } })
       })
+      success = res.ok
     } else {
-      await fetch(`${API_URL}/blog-posts`, {
+      const res = await fetch(`${API_URL}/blog-posts`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -164,9 +196,20 @@ async function savePost() {
         },
         body: JSON.stringify({ data: { ...form.value } })
       })
+      if (res.ok) {
+        const data = await res.json()
+        slug = data.data?.slug || form.value.slug
+        postId = data.data?.id
+        success = true
+      }
     }
-    router.push('/editor')
-    clearDraft()
+    if (success) {
+      articleUrl.value = `${window.location.origin}/blog/${encodeURIComponent(slug)}`
+      showSuccessModal.value = true
+      clearDraft()
+    } else {
+      alert('Failed to save article. Please try again.')
+    }
   } finally {
     saving.value = false
   }
@@ -267,6 +310,40 @@ watch(
 }
 .btn-danger:hover {
   background: #fecaca;
+  color: #b91c1c;
+}
+.btn-article {
+  background: linear-gradient(90deg, #2563eb 0%, #38bdf8 100%);
+  color: #fff;
+  font-weight: 700;
+  border-radius: 0.5rem;
+  padding: 0.9rem 2rem;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 16px rgba(56,189,248,0.15);
+  transition: background 0.2s, transform 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.btn-article:disabled {
+  opacity: 0.7;
+}
+.btn-cancel {
+  background: #f1f5f9;
+  color: #dc2626;
+  font-weight: 600;
+  border-radius: 0.5rem;
+  padding: 0.75rem 2rem;
+  border: 1px solid #fecaca;
+  transition: background 0.2s, color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+.btn-cancel:hover {
+  background: #fee2e2;
   color: #b91c1c;
 }
 .modal-overlay {
