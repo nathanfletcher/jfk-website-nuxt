@@ -19,20 +19,18 @@
           <span>Back to Blog</span>
         </NuxtLink>
         <!-- Hero Section -->
-    <!-- Hero Section -->
-    <section class="hero-section animate-fade-in-up bg-[url(/assets/images/jt-hero-2.jpg)] bg-cover bg-center flex items-end min-h-[40vh] rounded-lg mb-8">
-      <div class="container mx-auto items-start backdrop-blur-sm shadow-lg pl-5 pt-5 pb-10 md:text-left">
-        <h1 class="text-3xl text-blue-500 sm:text-4xl font-bold mb-3">{{ post.title }}</h1>
-      </div>
-    </section>
-        
+        <section class="hero-section animate-fade-in-up bg-[url(/assets/images/jt-hero-2.jpg)] bg-cover bg-center flex items-end min-h-[40vh] rounded-lg mb-8">
+          <div class="container mx-auto items-start backdrop-blur-sm shadow-lg pl-5 pt-5 pb-10 md:text-left">
+            <h1 class="text-3xl text-blue-500 sm:text-4xl font-bold mb-3">{{ post.title }}</h1>
+          </div>
+        </section>
         <div class="text-gray-500 text-sm flex items-center gap-2">
           <span>By John Tamakloe</span>
           <span>&bull;</span>
-          <time :datetime="post.publishshedAt">{{ formatDate(post.publishedAt) }}</time>
+          <time :datetime="post.publishedAt">{{ formatDate(post.publishedAt) }}</time>
         </div>
       </div>
-      <div class="prose prose-blue max-w-none" v-html="renderedText"></div>
+      <div class="ck-content prose prose-blue max-w-none" v-html="renderedText"></div>
     </article>
   </div>
 </template>
@@ -134,7 +132,12 @@ onMounted(async () => {
       const fallbackData = await fallback.json()
       // Find post by slug in fallback
       const postId = decodeURIComponent(route.params.id as string)
-      post.value = fallbackData.find((p: any) => p.slug === postId) || null
+      // If blogdata fallback is set globally, use it (from blog/index.vue)
+      let postsArr = fallbackData.data
+      if (typeof window !== 'undefined' && (window as any).__JFK_BLOGDATA_FALLBACK) {
+        postsArr = (window as any).__JFK_BLOGDATA_FALLBACK.data
+      }
+      post.value = postsArr.find((p: any) => p.slug === postId) || null
       if (apiTimedOut) {
         console.warn('API timed out, using fallback blogdata.json')
       } else {
@@ -168,5 +171,9 @@ onMounted(async () => {
   }
 })
 </script>
+
+<style scoped>
+@import url('https://cdn.ckeditor.com/ckeditor5/45.2.0/ckeditor5-content.css');
+</style>
 
 

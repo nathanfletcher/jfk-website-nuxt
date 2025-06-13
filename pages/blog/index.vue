@@ -64,7 +64,12 @@ onMounted(async () => {
     // Fallback to blogdata.json
     const fallback = await fetch('/blogdata.json')
     const fallbackData = await fallback.json()
-    posts.value = (fallbackData as Array<{slug: string; id: number; publishedAt: string; title: string; text: string}>).sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+    // Use fallbackData directly as the posts list
+    posts.value = (fallbackData.data as Array<{slug: string; id: number; publishedAt: string; title: string; text: string}>).sort((a: any, b: any) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+    // Patch: set a global fallback for the blog post page
+    if (typeof window !== 'undefined') {
+      (window as any).__JFK_BLOGDATA_FALLBACK = fallbackData
+    }
     if (apiTimedOut) {
       console.warn('API timed out, using fallback blogdata.json')
     } else {
