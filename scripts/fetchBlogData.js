@@ -17,9 +17,36 @@ async function fetchAllPosts() {
 
 async function main() {
   try {
+    // Read existing blogdata.json if it exists
+    let existing = []
+    if (fs.existsSync(OUT_PATH)) {
+      try {
+        existing = JSON.parse(fs.readFileSync(OUT_PATH, 'utf-8'))
+      } catch (e) {
+        console.warn('Warning: Could not parse existing blogdata.json, starting fresh.')
+        existing = []
+      }
+    }
+    // Index existing posts by documentId
+    const existingMap = new Map()
+    for (const post of existing) {
+      if (post.documentId) existingMap.set(post.documentId, post)
+    }
+    // Fetch all posts from Strapi (up to 500)
     const posts = await fetchAllPosts()
-    fs.writeFileSync(OUT_PATH, JSON.stringify(posts, null, 2))
-    console.log(`Fetched and saved ${posts.length} posts to blogdata.json`)
+    // Merge: update or add new posts from Strapi
+    for (const post of posts) {
+      if (post.documentId) {
+        const existingPost = existingMap.get(post.documentId)
+        if (!existingPost || (post.updatedAt && existingPost.updatedAt !== post.updatedAt)) {
+          existingMap.set(post.documentId, post)
+        }
+      }
+    }
+    // Write merged posts (all, including old ones) back to blogdata.json
+    const merged = Array.from(existingMap.values())
+    fs.writeFileSync(OUT_PATH, JSON.stringify(merged, null, 2))
+    console.log(`Merged and saved ${merged.length} posts to blogdata.json`)
   } catch (e) {
     console.error('Error:', e)
     process.exit(1)
