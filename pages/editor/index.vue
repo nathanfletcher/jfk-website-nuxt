@@ -42,8 +42,10 @@
 import { NuxtLink } from '#components'
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
+import { useRuntimeConfig } from '#imports'
 
 const router = useRouter()
+const config = useRuntimeConfig()
 
 const identifier = ref('')
 const password = ref('')
@@ -67,7 +69,9 @@ onMounted(async () => {
   }
 })
 
-const API_URL = 'https://reliable-bubble-e0aafb3b9e.strapiapp.com/api'
+// USE LOCAL STRAPI URL FOR DEVELOPMENT OR https://reliable-bubble-e0aafb3b9e.strapiapp.com/api
+
+const API_URL = config.public.apiUrl
 
 async function login() {
   loading.value = true

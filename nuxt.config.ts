@@ -22,5 +22,10 @@ export default defineNuxtConfig({
     configPath: '~/tailwind.config.ts',
     exposeConfig: false,
     viewer: true
+  },
+  runtimeConfig: {
+    public: {
+      apiUrl: process.env.NUXT_PUBLIC_API_URL || 'https://reliable-bubble-e0aafb3b9e.strapiapp.com/api'
+    }
   }
 })

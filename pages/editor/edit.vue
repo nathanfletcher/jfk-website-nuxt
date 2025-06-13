@@ -80,9 +80,11 @@
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import { useRuntimeConfig } from '#imports'
 
 const router = useRouter()
 const route = useRoute()
+const config = useRuntimeConfig()
 
 const editor = ref()
 const ClassicEditor = ref()
@@ -98,7 +100,7 @@ const showCancelConfirm = ref(false)
 const showSuccessModal = ref(false)
 const articleUrl = ref('')
 
-const API_URL = 'https://reliable-bubble-e0aafb3b9e.strapiapp.com/api'
+const API_URL = config.public.apiUrl
 const token = ref<string | null>(null)
 
 onMounted(async () => {
@@ -119,16 +121,19 @@ onMounted(async () => {
 
 async function loadPostBySlug(slug: string) {
   isEdit.value = true
-  const res = await fetch(`${API_URL}/blog-posts?filters[slug][$eq]=${encodeURIComponent(slug)}`,
-    { headers: { Authorization: `Bearer ${token.value}` } })
+  const res = await fetch(`${API_URL}/blog-posts?filters[slug][$eq]=${encodeURIComponent(slug)}`);
   const data = await res.json()
   if (data.data && data.data.length > 0) {
-    editingPostId.value = data.data[0].id
+    // Use documentId for Strapi 5
+    editingPostId.value = data.data[0].documentId
     form.value = {
       title: data.data[0].title,
       slug: data.data[0].slug,
       text: data.data[0].text
     }
+  } else {
+    alert('Post not found.')
+    router.push('/editor')
   }
 }
 
@@ -175,33 +180,63 @@ async function savePost() {
   saving.value = true
   try {
     let slug = form.value.slug
-    let postId = editingPostId.value
+    if (!slug) {
+      slug = slugify(form.value.title)
+      form.value.slug = slug
+    }
+    let postDocumentId = null
     let success = false
-    if (isEdit.value && postId) {
-      const res = await fetch(`${API_URL}/blog-posts/${postId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token.value}`
-        },
-        body: JSON.stringify({ data: { ...form.value } })
-      })
-      success = res.ok
-    } else {
-      const res = await fetch(`${API_URL}/blog-posts`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token.value}`
-        },
-        body: JSON.stringify({ data: { ...form.value } })
-      })
-      if (res.ok) {
-        const data = await res.json()
-        slug = data.data?.slug || form.value.slug
-        postId = data.data?.id
-        success = true
+    // Always search for post by slug first
+    const res = await fetch(`${API_URL}/blog-posts?filters[slug][$eq]=${encodeURIComponent(slug)}`);
+    if (res.ok) {
+      const data = await res.json()
+      if (data.data && data.data.length > 0) {
+        // Post exists, update it using documentId
+        postDocumentId = data.data[0].documentId
+        const updateBody = {
+          data: {
+            title: form.value.title,
+            text: form.value.text,
+            slug: form.value.slug
+          }
+        }
+        const updateRes = await fetch(`${API_URL}/blog-posts/${postDocumentId}`,
+          {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${token.value}`
+            },
+            body: JSON.stringify(updateBody)
+          })
+        success = updateRes.ok
+      } else {
+        // Post does not exist, create it
+        const createBody = {
+          data: {
+            title: form.value.title,
+            text: form.value.text,
+            slug: form.value.slug
+          }
+        }
+        const createRes = await fetch(`${API_URL}/blog-posts`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token.value}`
+          },
+          body: JSON.stringify(createBody)
+        })
+        if (createRes.ok) {
+          const createData = await createRes.json()
+          slug = createData.data?.slug || form.value.slug
+          postDocumentId = createData.data?.documentId
+          success = true
+        }
       }
+    } else {
+      alert('Failed to fetch post by slug. Please try again.')
+      return
     }
     if (success) {
       articleUrl.value = `${window.location.origin}/blog/${encodeURIComponent(slug)}`
@@ -219,6 +254,7 @@ async function deletePost() {
   if (!editingPostId.value) return
   saving.value = true
   try {
+    // Use documentId for Strapi 5
     await fetch(`${API_URL}/blog-posts/${editingPostId.value}`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token.value}` }
