@@ -35,6 +35,13 @@
         </div>
       </div>
     </div>
+    <div v-if="showColdStartModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+      <div class="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full text-center">
+        <h3 class="text-lg font-bold mb-2 text-blue-700">Editor is Waking Up</h3>
+        <p class="mb-4 text-gray-700">The editor backend is starting up. This may take up to a minute if the server was idle. Please wait and try again in a few moments.</p>
+        <button class="btn-primary w-full" @click="showColdStartModal = false">OK</button>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -73,9 +80,18 @@ onMounted(async () => {
 
 const API_URL = config.public.apiUrl
 
+const loginTimeoutMs = 4000
+let loginTimeoutHandle: ReturnType<typeof setTimeout> | null = null
+const showColdStartModal = ref(false)
+
 async function login() {
   loading.value = true
   error.value = ''
+  showColdStartModal.value = false
+  if (loginTimeoutHandle) clearTimeout(loginTimeoutHandle)
+  loginTimeoutHandle = setTimeout(() => {
+    showColdStartModal.value = true
+  }, loginTimeoutMs)
   try {
     const res = await fetch(`${API_URL}/auth/local`, {
       method: 'POST',
@@ -89,6 +105,7 @@ async function login() {
       // Save token to localStorage for persistence
       localStorage.setItem('jfk_blog_editor_token', data.jwt)
       await fetchPosts()
+      showColdStartModal.value = false
     } else {
       error.value = data.error?.message || 'Login failed'
     }
@@ -96,6 +113,7 @@ async function login() {
     error.value = 'Login failed'
   } finally {
     loading.value = false
+    if (loginTimeoutHandle) clearTimeout(loginTimeoutHandle)
   }
 }
 

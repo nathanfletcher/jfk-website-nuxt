@@ -89,23 +89,34 @@ onMounted(async () => {
   try {
     const config = useRuntimeConfig()
     const base = config.app.baseURL || '/'
-    const res = await fetch(`https://reliable-bubble-e0aafb3b9e.strapiapp.com/api/blog-posts?sort=createdAt:desc`)
-  
-    if (!res.ok) {
-      throw new Error(`HTTP error! status: ${res.status}`);
+    let apiTimedOut = false
+    const timeout = new Promise((_, reject) => setTimeout(() => { apiTimedOut = true; reject(new Error('timeout')) }, 3000))
+    try {
+      const res = await Promise.race([
+        fetch(`${config.public.apiUrl}/blog-posts?sort=createdAt:desc`),
+        timeout
+      ])
+      if (res instanceof Response && res.ok) {
+        const data = await res.json()
+        posts.value = data.data.slice(0, 3)
+      } else {
+        throw new Error('API response not ok')
+      }
+    } catch (err) {
+      // Fallback to blogdata.json
+      const fallback = await fetch('/blogdata.json')
+      const fallbackData = await fallback.json()
+      posts.value = fallbackData.slice(0, 3)
+      if (apiTimedOut) {
+        console.warn('API timed out, using fallback blogdata.json')
+      } else {
+        console.error('API failed, using fallback blogdata.json:', err)
+      }
     }
-    const data = await res.json();
-    
-    posts.value = data.data.slice(0, 3);
-    console.log('Fetched data:', data);
-    console.log('Posts after assignment:', posts.value);
-    console.log('Latest posts computed:', latestPosts.value);
   } catch (error) {
-    console.error('Failed to fetch blog posts:', error);
-    // Optionally set an error state to display to the user
+    console.error('Failed to fetch blog posts:', error)
   } finally {
-    loading.value = false;
-    console.log('Loading finished.');
+    loading.value = false
   }
 })
 
@@ -207,12 +218,9 @@ useHead({
   font-size: 1rem;
 }
 
-.hero-section {
-  /* background: linear-gradient(120deg, #f0f9ff 10%, #e0e7ef 1%); */
-
-}
-
-
+/* .hero-section {
+  // custom styles if needed
+} */
 
 .line-clamp-3 {
   display: -webkit-box;

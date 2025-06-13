@@ -105,49 +105,42 @@ onMounted(async () => {
   try {
     const config = useRuntimeConfig()
     const base = config.app.baseURL || '/'
-    
-    const postId = decodeURIComponent(route.params.id as string)
-
- 
-    const query = qs.stringify({
-      filters: {
-        slug: {
-          $eq: postId, // Match by slug or ID
+    let apiTimedOut = false
+    const timeout = new Promise((_, reject) => setTimeout(() => { apiTimedOut = true; reject(new Error('timeout')) }, 3000))
+    try {
+      const query = qs.stringify({
+        filters: {
+          slug: {
+            $eq: decodeURIComponent(route.params.id as string),
+          },
         },
-      },
-    }, {
-      encodeValuesOnly: true, // prettify URL
-    });
-
-    // Use a request function to fetch users (if needed)
-    // const users =
-
-    //await request(`/api/users?${query}`);
-
-    //const res = await fetch(`${base}sampleblog.json`)
-    const res = await fetch(`https://reliable-bubble-e0aafb3b9e.strapiapp.com/api/blog-posts?${query}`, {
-      headers: {
-        'Content-Type': 'application/json',
+      }, { encodeValuesOnly: true })
+      const res = await Promise.race([
+        fetch(`${config.public.apiUrl}/blog-posts?${query}`, {
+          headers: { 'Content-Type': 'application/json' }
+        }),
+        timeout
+      ])
+      if (res instanceof Response && res.ok) {
+        let postsData = await res.json()
+        if (!Array.isArray(postsData.data)) throw new Error('Invalid data format')
+        post.value = postsData.data[0] || null
+      } else {
+        throw new Error('API response not ok')
       }
-    })
-    if (!res.ok) {
-      throw new Error(`HTTP error! status: ${res.status}`)
+    } catch (err) {
+      // Fallback to blogdata.json
+      const fallback = await fetch('/blogdata.json')
+      const fallbackData = await fallback.json()
+      // Find post by slug in fallback
+      const postId = decodeURIComponent(route.params.id as string)
+      post.value = fallbackData.find((p: any) => p.slug === postId) || null
+      if (apiTimedOut) {
+        console.warn('API timed out, using fallback blogdata.json')
+      } else {
+        console.error('API failed, using fallback blogdata.json:', err)
+      }
     }
-    let posts = await res.json()
-    console.log('Fetched posts:', posts)
-    if (!Array.isArray(posts.data)) {
-      console.error('Invalid data format:', posts)
-      return
-    }
-    //Find post by slug
-    /* const postFound = posts.data.find((p: any) => p.slug === postId || p.id === postId);
-    if (!postFound) {
-      console.error('Post not found with ID:', postId)
-      return
-    }*/
-    post.value = posts.data[0] || null; // Use the first post if multiple found
-    console.log('Post found:', post.value)
-    
     // Set SEO meta tags if post found
     if (post.value) {
       useHead({

@@ -1,0 +1,30 @@
+# .github/workflows/fetch-blogdata.yml
+name: Fetch Blog Data from Strapi
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Every hour
+  workflow_dispatch:
+
+jobs:
+  fetch-blogdata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fetch blog posts from Strapi and update blogdata.json
+        env:
+          STRAPI_API_URL: ${{ secrets.STRAPI_API_URL }}
+        run: node scripts/fetchBlogData.js
+
+      - name: Commit and push blogdata.json
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: update blogdata.json from Strapi [skip ci]'
+          file_pattern: public/blogdata.json

@@ -45,18 +45,32 @@ function getFirstSentences(text: string, count = 2): string {
 
 onMounted(async () => {
   const config = useRuntimeConfig()
-  // const base = config.app.baseURL || '/'
-  const res = await fetch(`https://reliable-bubble-e0aafb3b9e.strapiapp.com/api/blog-posts?sort=createdAt:desc`, {
-    headers: {
-      'Content-Type': 'application/json',
+  let apiTimedOut = false
+  const timeout = new Promise((_, reject) => setTimeout(() => { apiTimedOut = true; reject(new Error('timeout')) }, 3000))
+  try {
+    const res = await Promise.race([
+      fetch(`${config.public.apiUrl}/blog-posts?sort=createdAt:desc`, {
+        headers: { 'Content-Type': 'application/json' }
+      }),
+      timeout
+    ])
+    if (res instanceof Response && res.ok) {
+      const data = await res.json()
+      posts.value = (data.data as Array<{slug: string; id: number; publishedAt: string; title: string; text: string}>).sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+    } else {
+      throw new Error('API response not ok')
     }
-  })
-  const data = await res.json()
-  if (!Array.isArray(data.data)) {
-    loading.value = false
-    return
+  } catch (err) {
+    // Fallback to blogdata.json
+    const fallback = await fetch('/blogdata.json')
+    const fallbackData = await fallback.json()
+    posts.value = (fallbackData as Array<{slug: string; id: number; publishedAt: string; title: string; text: string}>).sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+    if (apiTimedOut) {
+      console.warn('API timed out, using fallback blogdata.json')
+    } else {
+      console.error('API failed, using fallback blogdata.json:', err)
+    }
   }
-  posts.value = (data.data as Array<{slug: string; id: number; publishedAt: string; title: string; text: string}>).sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
   loading.value = false
 })
 </script>
