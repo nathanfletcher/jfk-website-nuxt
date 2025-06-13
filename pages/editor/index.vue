@@ -76,8 +76,6 @@ onMounted(async () => {
   }
 })
 
-// USE LOCAL STRAPI URL FOR DEVELOPMENT OR https://reliable-bubble-e0aafb3b9e.strapiapp.com/api
-
 const API_URL = config.public.apiUrl
 
 const loginTimeoutMs = 4000
