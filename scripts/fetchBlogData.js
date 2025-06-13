@@ -9,10 +9,22 @@ const API_URL = process.env.STRAPI_API_URL || 'https://reliable-bubble-e0aafb3b9
 const OUT_PATH = path.join(__dirname, '../public/blogdata.json')
 
 async function fetchAllPosts() {
-  const res = await fetch(`${API_URL}/blog-posts?sort=createdAt:desc`)
-  if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`)
-  const data = await res.json()
-  return data.data
+  let allPosts = []
+  let page = 1
+  let pageSize = 100
+  let totalPages = 1
+  do {
+    const res = await fetch(`${API_URL}/blog-posts?sort=createdAt:desc&pagination[page]=${page}&pagination[pageSize]=${pageSize}`)
+    if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`)
+    const data = await res.json()
+    if (Array.isArray(data.data)) {
+      allPosts.push(...data.data)
+    }
+    // Defensive: handle both Strapi v4 and v3 meta
+    totalPages = data.meta?.pagination?.pageCount || 1
+    page++
+  } while (page <= totalPages)
+  return allPosts
 }
 
 async function main() {
