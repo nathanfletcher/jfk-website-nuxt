@@ -130,7 +130,7 @@ function logout() {
 async function fetchPosts() {
   loading.value = true
   try {
-    const res = await fetch(`${API_URL}/blog-posts?sort=publishedAt:desc`, {
+    const res = await fetch(`${API_URL}/blog-posts?sort=createdAt:desc`, {
       headers: { Authorization: `Bearer ${token.value}` }
     })
     if (res.status === 401) {
