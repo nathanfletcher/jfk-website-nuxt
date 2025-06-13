@@ -17,6 +17,9 @@
         <p class="line-clamp-4 text-gray-700">{{ getFirstSentences(post.text, 2) }}...</p>
         <NuxtLink :to="`/blog/${encodeURIComponent(post.slug)}`" class="text-blue-500 hover:underline mt-2 inline-block">Read more</NuxtLink>
       </div>
+      <div v-if="hasMore" class="text-center mt-8">
+        <button @click="loadMore" class="px-6 py-2 rounded bg-blue-600 text-white font-semibold shadow hover:bg-blue-700 transition">Load More</button>
+      </div>
     </div>
   </div>
 </template>
@@ -25,8 +28,13 @@
 import { ref, onMounted } from 'vue'
 import { useRuntimeConfig } from '#imports'
 
+const PAGE_SIZE = 10
+const allPosts = ref<Array<{slug: string; id: number; publishedAt: string; title: string; text: string }>>([])
 const posts = ref<Array<{slug: string; id: number; publishedAt: string; title: string; text: string }>>([])
 const loading = ref(true)
+const hasMore = ref(false)
+const currentPage = ref(1)
+let usingFallback = false
 
 function formatDate(ts: string) {
   return new Date(ts).toLocaleDateString()
@@ -43,30 +51,60 @@ function getFirstSentences(text: string, count = 2): string {
   return match ? match[0].trim() : plain.split('\n').slice(0, count).join(' ');
 }
 
+function loadMore() {
+  const start = (currentPage.value - 1) * PAGE_SIZE
+  const end = currentPage.value * PAGE_SIZE
+  posts.value = allPosts.value.slice(0, end)
+  hasMore.value = end < allPosts.value.length
+  currentPage.value++
+}
+
 onMounted(async () => {
   const config = useRuntimeConfig()
   let apiTimedOut = false
   const timeout = new Promise((_, reject) => setTimeout(() => { apiTimedOut = true; reject(new Error('timeout')) }, 3000))
   try {
     const res = await Promise.race([
-      fetch(`${config.public.apiUrl}/blog-posts?sort=createdAt:desc`, {
-        headers: { 'Content-Type': 'application/json' }
-      }),
+      fetch(`${config.public.apiUrl}/blog-posts?sort=createdAt:desc&pagination[page]=1&pagination[pageSize]=${PAGE_SIZE}`),
       timeout
     ])
     if (res instanceof Response && res.ok) {
       const data = await res.json()
-      posts.value = (data.data as Array<{slug: string; id: number; publishedAt: string; title: string; text: string}>).sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+      allPosts.value = (data.data as Array<{slug: string; id: number; publishedAt: string; title: string; text: string}>)
+      posts.value = allPosts.value.slice(0, PAGE_SIZE)
+      // Check if more pages exist
+      hasMore.value = data.meta?.pagination?.total > PAGE_SIZE
+      // If more, fetch all for client-side load more
+      if (hasMore.value) {
+        let total = data.meta?.pagination?.total || allPosts.value.length
+        let pageCount = data.meta?.pagination?.pageCount || 1
+        let fetched = allPosts.value.length
+        let page = 2
+        while (fetched < total) {
+          const resMore = await fetch(`${config.public.apiUrl}/blog-posts?sort=createdAt:desc&pagination[page]=${page}&pagination[pageSize]=${PAGE_SIZE}`)
+          if (!resMore.ok) break
+          const moreData = await resMore.json()
+          if (Array.isArray(moreData.data)) {
+            allPosts.value.push(...moreData.data)
+            fetched += moreData.data.length
+          }
+          page++
+          if (page > pageCount) break
+        }
+        hasMore.value = posts.value.length < allPosts.value.length
+      }
     } else {
       throw new Error('API response not ok')
     }
   } catch (err) {
     // Fallback to blogdata.json
+    usingFallback = true
     const fallback = await fetch('/blogdata.json')
     const fallbackData = await fallback.json()
-    // Use fallbackData directly as the posts list
-    posts.value = (fallbackData.data as Array<{slug: string; id: number; publishedAt: string; title: string; text: string}>).sort((a: any, b: any) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-    // Patch: set a global fallback for the blog post page
+    allPosts.value = (Array.isArray(fallbackData) ? fallbackData : fallbackData.data) as Array<{slug: string; id: number; publishedAt: string; title: string; text: string}>
+    allPosts.value = allPosts.value.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+    posts.value = allPosts.value.slice(0, PAGE_SIZE)
+    hasMore.value = allPosts.value.length > PAGE_SIZE
     if (typeof window !== 'undefined') {
       (window as any).__JFK_BLOGDATA_FALLBACK = fallbackData
     }
