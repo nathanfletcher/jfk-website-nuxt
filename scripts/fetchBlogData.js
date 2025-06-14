@@ -9,7 +9,7 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-const API_URL = process.env.STRAPI_API_URL || 'https://reliable-bubble-e0aafb3b9e.strapiapp.com/api'
+const API_URL = process.env.NUXT_PUBLIC_API_URL || 'https://reliable-bubble-e0aafb3b9e.strapiapp.com/api'
 const OUT_PATH = path.join(__dirname, '../public/blogdata.json')
 
 // Use native fetch if available, otherwise fallback to node-fetch
