@@ -146,6 +146,28 @@ onMounted(async () => {
     }
     // Set SEO meta tags if post found
     if (post.value) {
+      // Use route param as slug fallback if post.value.slug is missing
+      const slug = (post.value as any).slug || route.params.id
+      const canonicalUrl = (typeof window !== 'undefined' ? window.location.origin : 'https://johntamakloe.com') + `/blog/${encodeURIComponent(slug as string)}`
+      // Structured data (JSON-LD)
+      const structuredData = {
+        '@context': 'https://schema.org',
+        '@type': 'BlogPosting',
+        headline: post.value.title,
+        description: getFirstSentences(post.value.text, 2),
+        datePublished: post.value.publishedAt,
+        dateModified: (post.value as any).updatedAt || post.value.publishedAt,
+        author: {
+          '@type': 'Person',
+          name: 'John Tamakloe',
+        },
+        mainEntityOfPage: {
+          '@type': 'WebPage',
+          '@id': canonicalUrl
+        },
+        image: base + 'images/jt-hero-2.jpg',
+        url: canonicalUrl
+      }
       useHead({
         title: post.value.title + ' | JFK Blog',
         meta: [
@@ -154,12 +176,22 @@ onMounted(async () => {
           { property: 'og:description', content: getFirstSentences(post.value.text, 2) },
           { property: 'og:site_name', content: 'John Tamakloe (Evangelist)' },
           { property: 'og:type', content: 'article' },
-          { property: 'og:url', content: typeof window !== 'undefined' ? window.location.href : '' },
+          { property: 'og:url', content: canonicalUrl },
           { property: 'og:image', content: base + 'images/jt-hero-2.jpg' },
           { name: 'twitter:card', content: 'summary_large_image' },
           { name: 'twitter:title', content: post.value.title },
           { name: 'twitter:description', content: getFirstSentences(post.value.text, 2) },
           { name: 'twitter:image', content: base + 'images/jt-hero-2.jpg' },
+          { name: 'robots', content: 'index,follow' }
+        ],
+        link: [
+          { rel: 'canonical', href: canonicalUrl }
+        ],
+        script: [
+          {
+            type: 'application/ld+json',
+            innerHTML: JSON.stringify(structuredData)
+          }
         ]
       })
     }

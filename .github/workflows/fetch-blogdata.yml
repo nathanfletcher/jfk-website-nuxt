@@ -35,3 +35,21 @@ jobs:
         with:
           commit_message: 'chore: update blogdata.json from Strapi [skip ci]'
           file_pattern: public/blogdata.json
+
+      - name: Install sitemap package
+        run: npm install sitemap
+
+      - name: Generate sitemap.xml
+        run: node scripts/generateSitemap.js
+
+      - name: Commit and push sitemap.xml
+        uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: 'chore: update sitemap.xml [skip ci]'
+          file_pattern: public/sitemap.xml
+
+      - name: Trigger site deployment
+        uses: peter-evans/repository-dispatch@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          event-type: trigger-deploy

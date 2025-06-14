@@ -27,5 +27,10 @@ export default defineNuxtConfig({
     public: {
       apiUrl: process.env.NUXT_PUBLIC_API_URL || 'https://reliable-bubble-e0aafb3b9e.strapiapp.com/api'
     }
-  }
+  },
+  nitro: {
+    prerender: {
+      routes: ['/sitemap.xml'],
+    },
+  },
 })
