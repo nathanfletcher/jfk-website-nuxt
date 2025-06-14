@@ -19,7 +19,8 @@ jobs:
           node-version: '20'
 
       - name: Disable postinstall
-        run: npm set-script postinstall ""
+        run: |
+          sed -i.bak '/"postinstall"/d' package.json
 
       - name: Install dependencies
         run: npm install
