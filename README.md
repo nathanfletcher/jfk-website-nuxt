@@ -1,75 +1,97 @@
-# Nuxt Minimal Starter
+# JFK Personal Blog (Nuxt.js + Strapi + Static Fallback)
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+A robust, mobile-friendly personal blog built with Nuxt.js, featuring a WYSIWYG editor, Strapi CMS integration, and static JSON fallback for resilience against API downtime or cold starts. Includes a modern UI, SEO, and a GitHub Actions workflow for automated static data updates.
+
+---
+
+## Features
+
+- **Nuxt.js 3** with Tailwind CSS for a modern, responsive UI
+- **Strapi CMS** integration for blog post management (API URL configurable)
+- **Static fallback**: Uses `public/blogdata.json` if Strapi API is slow/unavailable
+- **Mobile-optimized WYSIWYG editor** (CKEditor 5, dynamic import)
+- **Autosave drafts** to localStorage with indicator
+- **SEO**: robots.txt, sitemap.xml guidance, meta tags
+- **Sitewide footer** with current year and contact info
+- **GitHub Actions**: fetches/merges Strapi posts to `blogdata.json` hourly
+- **Resilient editor UX**: login modal, cold start warning, grouped actions, modals
+- **Markdown rendering** with WhatsApp-style conversion
+- **Global fallback**: blogdata is set on `window` for all blog pages
+
+---
 
 ## Setup
 
-Make sure to install dependencies:
+Install dependencies:
 
 ```bash
-# npm
 npm install
-
-# pnpm
-pnpm install
-
-# yarn
+# or
 yarn install
-
-# bun
-bun install
+# or
+pnpm install
 ```
 
-## Development Server
+### Environment Variables
 
-Start the development server on `http://localhost:3000`:
+- `STRAPI_API_URL` (optional): Set your Strapi API base URL. Defaults to demo instance.
+
+---
+
+## Development
+
+Start the dev server:
 
 ```bash
-# npm
 npm run dev
-
-# pnpm
-pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
+
+Visit [http://localhost:3000](http://localhost:3000)
+
+---
 
 ## Production
 
-Build the application for production:
+Build and preview:
 
 ```bash
-# npm
 npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
 npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
 ```
 
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+---
+
+## Editor Workflow
+
+- `/editor` — Dashboard, search, and list posts
+- `/editor/edit` — Create or edit posts (autosave, modals, slug auto-gen)
+- `/editor/preview` — WYSIWYG preview
+
+---
+
+## Static Fallback & Data Sync
+
+- If Strapi API is unavailable, blog pages load from `public/blogdata.json`.
+- `scripts/fetchBlogData.js` fetches all posts (with pagination) from Strapi and merges with existing static data.
+- `.github/workflows/fetch-blogdata.yml` runs the script hourly and auto-commits updates.
+
+---
+
+## SEO
+
+- `robots.txt` excludes `/editor` and subpages from search engines
+- Add your sitemap.xml for full SEO support
+
+---
+
+## Customization
+
+- Update contact info in `components/SiteFooter.vue`
+- Adjust Tailwind styles in `assets/css/tailwind.css` and `tailwind.config.ts`
+- Configure Strapi API URL in `nuxt.config.ts` or via environment variable
+
+---
+
+## License
+
+MIT
