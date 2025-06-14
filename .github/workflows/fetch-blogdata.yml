@@ -22,8 +22,7 @@ jobs:
         run: |
           node -e "let p=require('./package.json');p.scripts=p.scripts||{};p.scripts.postinstall='true';require('fs').writeFileSync('package.json',JSON.stringify(p,null,2));"
 
-      - name: Install dependencies
-        run: npm install
+      
 
       - name: Fetch blog posts from Strapi and update blogdata.json
         env:

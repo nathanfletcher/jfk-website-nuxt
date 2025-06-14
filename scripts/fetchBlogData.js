@@ -4,7 +4,6 @@
 
 import fs from 'fs'
 import path from 'path'
-import fetch from 'node-fetch'
 import { fileURLToPath } from 'url'
 
 const __filename = fileURLToPath(import.meta.url)
@@ -12,6 +11,14 @@ const __dirname = path.dirname(__filename)
 
 const API_URL = process.env.STRAPI_API_URL || 'https://reliable-bubble-e0aafb3b9e.strapiapp.com/api'
 const OUT_PATH = path.join(__dirname, '../public/blogdata.json')
+
+// Use native fetch if available, otherwise fallback to node-fetch
+let fetchFn
+try {
+  fetchFn = globalThis.fetch || fetch
+} catch {
+  fetchFn = fetch
+}
 
 async function fetchAllPosts() {
   let allPosts = []
@@ -21,7 +28,7 @@ async function fetchAllPosts() {
   do {
     const url = `${API_URL}/blog-posts?sort=createdAt:desc&pagination[page]=${page}&pagination[pageSize]=${pageSize}`
     console.log(`Fetching page ${page} from: ${url}`)
-    const res = await fetch(url)
+    const res = await fetchFn(url)
     if (!res.ok) {
       const text = await res.text().catch(() => '')
       throw new Error(`Failed to fetch: ${res.status} ${res.statusText} - ${text}`)
