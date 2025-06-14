@@ -19,8 +19,13 @@ async function fetchAllPosts() {
   let pageSize = 100
   let totalPages = 1
   do {
-    const res = await fetch(`${API_URL}/blog-posts?sort=createdAt:desc&pagination[page]=${page}&pagination[pageSize]=${pageSize}`)
-    if (!res.ok) throw new Error(`Failed to fetch: ${res.status}`)
+    const url = `${API_URL}/blog-posts?sort=createdAt:desc&pagination[page]=${page}&pagination[pageSize]=${pageSize}`
+    console.log(`Fetching page ${page} from: ${url}`)
+    const res = await fetch(url)
+    if (!res.ok) {
+      const text = await res.text().catch(() => '')
+      throw new Error(`Failed to fetch: ${res.status} ${res.statusText} - ${text}`)
+    }
     const data = await res.json()
     if (Array.isArray(data.data)) {
       allPosts.push(...data.data)
