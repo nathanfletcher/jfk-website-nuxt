@@ -45,8 +45,14 @@ async function main() {
     }
     // Index existing posts by documentId
     const existingMap = new Map()
-    for (const post of existing) {
-      if (post.documentId) existingMap.set(post.documentId, post)
+    if (Array.isArray(existing)) {
+      for (const post of existing) {
+        if (post && post.documentId) existingMap.set(post.documentId, post)
+      }
+    } else if (existing && Array.isArray(existing.data)) {
+      for (const post of existing.data) {
+        if (post && post.documentId) existingMap.set(post.documentId, post)
+      }
     }
     // Fetch all posts from Strapi (all pages)
     const posts = await fetchAllPosts()
