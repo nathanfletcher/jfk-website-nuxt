@@ -2,8 +2,13 @@
 // Usage: node scripts/fetchBlogData.js
 // Fetches all blog posts from Strapi API and writes to public/blogdata.json
 
-const fs = require('fs')
-const path = require('path')
+import fs from 'fs'
+import path from 'path'
+import fetch from 'node-fetch'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const API_URL = process.env.STRAPI_API_URL || 'https://reliable-bubble-e0aafb3b9e.strapiapp.com/api'
 const OUT_PATH = path.join(__dirname, '../public/blogdata.json')
@@ -20,7 +25,6 @@ async function fetchAllPosts() {
     if (Array.isArray(data.data)) {
       allPosts.push(...data.data)
     }
-    // Defensive: handle both Strapi v4 and v3 meta
     totalPages = data.meta?.pagination?.pageCount || 1
     page++
   } while (page <= totalPages)
@@ -44,7 +48,7 @@ async function main() {
     for (const post of existing) {
       if (post.documentId) existingMap.set(post.documentId, post)
     }
-    // Fetch all posts from Strapi (up to 500)
+    // Fetch all posts from Strapi (all pages)
     const posts = await fetchAllPosts()
     // Merge: update or add new posts from Strapi
     for (const post of posts) {
