@@ -16,7 +16,7 @@
       <time>{{ publishedAt }}</time>
     </div>
     <article class="bg-white rounded-lg shadow-sm p-6 sm:p-8">
-      <div class="prose prose-blue max-w-none" v-html="$route.query.text"></div>
+      <div class="ck-content prose prose-blue max-w-none" v-html="renderedText"></div>
     </article>
   </div>
 </template>
@@ -24,16 +24,55 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
+// @ts-ignore
+import MarkdownIt from 'markdown-it'
+
 const route = useRoute()
 const publishedAt = computed(() => {
   const val = route.query.publishedAt
   if (!val || Array.isArray(val)) return 'Draft'
-  const d = new Date(val)
+  const d = new Date(val as string)
   return isNaN(d.getTime()) ? 'Draft' : d.toLocaleDateString()
+})
+
+const md = new MarkdownIt({
+  html: true,
+  linkify: true,
+  typographer: true,
+  breaks: true,
+})
+
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, '')
+}
+
+function getFirstSentences(text: string, count = 2): string {
+  const plain = stripHtml(text)
+  const match = plain.match(new RegExp(`(([^.!?]*[.!?]){1,${count}})`))
+  return match ? match[0].trim() : plain.split('\n').slice(0, count).join(' ')
+}
+
+function whatsappToMarkdown(text: string): string {
+  text = text.replace(/(^|\W)\*(\S[^*]*\S)\*(?=\W|$)/g, '$1**$2**')
+  text = text.replace(/(^|\W)_(\S[^_]*\S)_(?=\W|$)/g, '$1*$2*')
+  text = text.replace(/(^|\W)~(\S[^~]*\S)~(?=\W|$)/g, '$1~~$2~~')
+  text = text.replace(/```([\s\S]*?)```/g, function(_, code) {
+    return '```' + code + '```'
+  })
+  text = text.replace(/^(\s*)([\*-])\s+/gm, '$1- ')
+  text = text.replace(/^>\s+/gm, '> ')
+  return text
+}
+
+const renderedText = computed(() => {
+  const text = route.query.text as string || ''
+  const mdText = whatsappToMarkdown(text)
+  return md.render(mdText.replace(/\n/g, '<br>'))
 })
 </script>
 
-<style scoped>
+<style src="../../assets/css/ckeditor5-content.css"></style>
+<style>
 .hero-section {
   background-size: cover;
   background-position: center;
@@ -45,3 +84,4 @@ const publishedAt = computed(() => {
   font-size: 1.1rem;
 }
 </style>
+

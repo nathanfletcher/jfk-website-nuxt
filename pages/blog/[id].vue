@@ -172,8 +172,8 @@ onMounted(async () => {
 })
 </script>
 
-<style scoped>
-@import url('https://cdn.ckeditor.com/ckeditor5/45.2.0/ckeditor5-content.css');
+<style>
+@import '@/assets/css/ckeditor5-content.css';
 </style>
 
 
