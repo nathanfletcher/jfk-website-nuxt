@@ -33,17 +33,22 @@ async function fetchAllPosts() {
 
 async function main() {
   try {
+    console.log('--- Starting fetchBlogData.js ---')
     // Read existing blogdata.json if it exists
     let existing = []
     if (fs.existsSync(OUT_PATH)) {
       try {
+        console.log('Reading existing blogdata.json...')
         existing = JSON.parse(fs.readFileSync(OUT_PATH, 'utf-8'))
       } catch (e) {
         console.warn('Warning: Could not parse existing blogdata.json, starting fresh.')
         existing = []
       }
+    } else {
+      console.log('No existing blogdata.json found, starting fresh.')
     }
     // Index existing posts by documentId
+    console.log('Indexing existing posts...')
     const existingMap = new Map()
     if (Array.isArray(existing)) {
       for (const post of existing) {
@@ -55,20 +60,26 @@ async function main() {
       }
     }
     // Fetch all posts from Strapi (all pages)
+    console.log('Fetching all posts from Strapi...')
     const posts = await fetchAllPosts()
+    console.log(`Fetched ${posts.length} posts from Strapi.`)
     // Merge: update or add new posts from Strapi
+    let updated = 0
     for (const post of posts) {
       if (post.documentId) {
         const existingPost = existingMap.get(post.documentId)
         if (!existingPost || (post.updatedAt && existingPost.updatedAt !== post.updatedAt)) {
           existingMap.set(post.documentId, post)
+          updated++
         }
       }
     }
+    console.log(`Merged posts. ${updated} new or updated posts.`)
     // Write merged posts (all, including old ones) back to blogdata.json
     const merged = Array.from(existingMap.values())
     fs.writeFileSync(OUT_PATH, JSON.stringify(merged, null, 2))
     console.log(`Merged and saved ${merged.length} posts to blogdata.json`)
+    console.log('--- fetchBlogData.js complete ---')
   } catch (e) {
     console.error('Error:', e)
     process.exit(1)
