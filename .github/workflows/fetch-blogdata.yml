@@ -18,6 +18,9 @@ jobs:
         with:
           node-version: '20'
 
+      - name: Disable postinstall
+        run: npm set-script postinstall ""
+
       - name: Install dependencies
         run: npm install
 
