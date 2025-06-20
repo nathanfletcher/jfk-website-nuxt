@@ -69,7 +69,12 @@ function formatDate(ts: string) {
 }
 
 function stripHtml(html: string): string {
-  return html.replace(/<[^>]*>/g, '');
+  // Remove tags
+  let text = html.replace(/<[^>]*>/g, '');
+  // Replace &nbsp; and other common HTML entities
+  text = text.replace(/&nbsp;/g, ' ');
+  // Optionally: decode more entities if needed
+  return text;
 }
 
 function getFirstSentences(text: string, count = 2): string {
