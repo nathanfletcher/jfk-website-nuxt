@@ -103,48 +103,77 @@ onMounted(async () => {
   try {
     const config = useRuntimeConfig()
     const base = config.app.baseURL || '/'
-    let apiTimedOut = false
-    const timeout = new Promise((_, reject) => setTimeout(() => { apiTimedOut = true; reject(new Error('timeout')) }, 3000))
+    const postId = decodeURIComponent(route.params.id as string)
+    let postFound = false
+
+    // 1. Try to load from local blogdata.json first
     try {
-      const query = qs.stringify({
-        filters: {
-          slug: {
-            $eq: decodeURIComponent(route.params.id as string),
-          },
-        },
-      }, { encodeValuesOnly: true })
-      const res = await Promise.race([
-        fetch(`${config.public.apiUrl}/blog-posts?${query}`, {
-          headers: { 'Content-Type': 'application/json' }
-        }),
-        timeout
-      ])
-      if (res instanceof Response && res.ok) {
-        let postsData = await res.json()
-        if (!Array.isArray(postsData.data)) throw new Error('Invalid data format')
-        post.value = postsData.data[0] || null
-      } else {
-        throw new Error('API response not ok')
-      }
-    } catch (err) {
-      // Fallback to blogdata.json
-      const fallback = await fetch('/blogdata.json')
-      const fallbackData = await fallback.json()
-      // Find post by slug in fallback
-      const postId = decodeURIComponent(route.params.id as string)
-      // If blogdata fallback is set globally, use it (from blog/index.vue)
-      let postsArr = fallbackData.data
-      if (typeof window !== 'undefined' && (window as any).__JFK_BLOGDATA_FALLBACK) {
-        postsArr = (window as any).__JFK_BLOGDATA_FALLBACK.data
-      }
+      console.log('Attempting to load post from local ..')
+      const fallbackRes = await fetch('/blogdata.json')
+      const fallbackData = await fallbackRes.json()
+      // Ensure fallbackData is an array or has a .data property that is an array
+      const postsArr = Array.isArray(fallbackData) ? fallbackData : (Array.isArray(fallbackData.data) ? fallbackData.data : [])
+
       post.value = postsArr.find((p: any) => p.slug === postId) || null
-      if (apiTimedOut) {
-        console.warn('API timed out, using fallback blogdata.json')
+
+      if (post.value) {
+        console.log('Post found in local ')
+        postFound = true
+        // Set a global fallback for consistency, even if found locally
+        if (typeof window !== 'undefined') {
+           (window as any).__JFK_BLOGDATA_FALLBACK = fallbackData
+        }
       } else {
-        console.error('API failed, using fallback blogdata.json:', err)
+        console.log('Post not found in local ')
+      }
+    } catch (e) {
+      console.warn('Could not load or parse local blogdata.json, falling back to API.', e)
+      postFound = false // Ensure we try API if local load fails
+    }
+
+    // 2. If not found locally, try fetching from Strapi API
+    if (!postFound) {
+      console.log('Attempting to fetch post from Strapi API...')
+      let apiTimedOut = false
+      const timeout = new Promise((_, reject) => setTimeout(() => { apiTimedOut = true; reject(new Error('timeout')) }, 3000))
+      try {
+        const query = qs.stringify({
+          filters: {
+            slug: {
+              $eq: postId,
+            },
+          },
+        }, { encodeValuesOnly: true })
+        const res = await Promise.race([
+          fetch(`${config.public.apiUrl}/blog-posts?${query}`, {
+            headers: { 'Content-Type': 'application/json' }
+          }),
+          timeout
+        ])
+        if (res instanceof Response && res.ok) {
+          let postsData = await res.json()
+          if (!Array.isArray(postsData.data)) throw new Error('Invalid data format from API')
+          post.value = postsData.data[0] || null
+          if (post.value) {
+             console.log('Post fetched successfully from API.')
+          } else {
+             console.log('Post not found in API.')
+          }
+        } else {
+          throw new Error('API response not ok')
+        }
+      } catch (err) {
+        console.error('API fetch failed or timed out.', err)
+        // If API fails AND local fallback failed previously, post remains null
+        if (apiTimedOut) {
+          console.warn('API timed out.')
+        } else {
+          console.error('API failed:', err)
+        }
       }
     }
-    // Set SEO meta tags if post found
+
+    // Set SEO meta tags if post found (either locally or from API)
     if (post.value) {
       // Use route param as slug fallback if post.value.slug is missing
       const slug = (post.value as any).slug || route.params.id
@@ -196,10 +225,10 @@ onMounted(async () => {
       })
     }
   } catch (error) {
-    console.error('Failed to fetch or find blog post:', error)
+    console.error('An unexpected error occurred during post loading:', error)
   } finally {
     loading.value = false
-    console.log('Loading finished.')
+    console.log('Post loading process finished.')
   }
 })
 </script>

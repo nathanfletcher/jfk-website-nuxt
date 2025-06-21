@@ -72,6 +72,7 @@ npm run preview
 ## Static Fallback & Data Sync
 
 - If Strapi API is unavailable, blog pages load from `public/blogdata.json`.
+- Individual blog posts (`/blog/:slug`) now attempt to load from `public/blogdata.json` first for faster access, falling back to the Strapi API if not found locally.
 - `scripts/fetchBlogData.js` fetches all posts (with pagination) from Strapi and merges with existing static data.
 - `.github/workflows/fetch-blogdata.yml` runs the script hourly, auto-commits updates, generates `sitemap.xml`, and triggers deployment.
 
