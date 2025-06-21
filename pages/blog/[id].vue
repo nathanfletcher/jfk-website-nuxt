@@ -19,7 +19,7 @@
           <span>Back to Blog</span>
         </NuxtLink>
         <!-- Hero Section -->
-        <section class="hero-section animate-fade-in-up bg-[url(/assets/images/jt-hero-2.jpg)] bg-cover bg-center flex items-end min-h-[40vh] rounded-lg mb-8">
+        <section class="hero-section animate-fade-in-up bg-[url(/assets/images/jt-hero-2.webp)] bg-cover bg-center flex items-end min-h-[40vh] rounded-lg mb-8">
           <div class="container mx-auto items-start backdrop-blur-sm shadow-lg pl-5 pt-5 pb-10 md:text-left">
             <h1 class="text-3xl text-blue-500 sm:text-4xl font-bold mb-3">{{ post.title }}</h1>
           </div>
