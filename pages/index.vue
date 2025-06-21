@@ -1,7 +1,7 @@
 <template>
   <div>
         <!-- Hero Section -->
-    <section class="hero-section animate-fade-in-up bg-[url(/assets/images/jt-hero-1.jpg)] bg-cover bg-center flex items-end min-h-[60vh]">
+    <section class="hero-section animate-fade-in-up bg-[url(/assets/images/jt-hero-1.webp)] bg-cover bg-center flex items-end min-h-[60vh]">
       
     </section>
     <div class="container mx-auto items-start backdrop-blur-sm shadow-lg pl-5 pt-5 md:text-left">
@@ -26,7 +26,7 @@
     </section>
 
 <section
-  class="aboutPicture animate-fade-in-up bg-[url(/assets/images/jt-hero-3.jpg)] bg-cover  min-h-[200px] sm:min-h-[300px] md:min-h-[400px] w-full">
+  class="aboutPicture animate-fade-in-up bg-[url(/assets/images/jt-hero-3.webp)] bg-cover  min-h-[200px] sm:min-h-[300px] md:min-h-[400px] w-full">
 </section>
     <!-- About Section -->
     <section id="about" class="bg-blue-50 animate-fade-in-up">
@@ -132,11 +132,11 @@ useHead({
     { property: 'og:description', content: "Welcome to my personal website! Here, you'll find where I share reflections, stories, and lessons from my journey of faith, life, and learning. Join me as we explore practical Christianity, unity, purpose, and the beauty of everyday moments." },
     { property: 'og:type', content: 'website' },
     { property: 'og:url', content: typeof window !== 'undefined' ? window.location.href : '' },
-    { property: 'og:image', content: '/images/jt-hero-1.jpg' },
+    { property: 'og:image', content: '/images/jt-hero-1.webp' },
     { name: 'twitter:card', content: 'summary_large_image' },
     { name: 'twitter:title', content: "John Tamakloe (Evangelist) | Personal Website & Blog" },
     { name: 'twitter:description', content: "Welcome to my personal website! Here, you'll find where I share reflections, stories, and lessons from my journey of faith, life, and learning. Join me as we explore practical Christianity, unity, purpose, and the beauty of everyday moments." },
-    { name: 'twitter:image', content: '/images/jt-hero-1.jpg' },
+    { name: 'twitter:image', content: '/images/jt-hero-1.webp' },
   ]
 })
 </script>
