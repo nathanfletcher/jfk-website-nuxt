@@ -1,5 +1,7 @@
 // https://nuxt.com/docs/api/configuration/nuxt-config
 import tailwindcss from "@tailwindcss/vite";
+import fs from 'fs'
+
 export default defineNuxtConfig({
   ssr: true,
   app: {
@@ -30,7 +32,23 @@ export default defineNuxtConfig({
   },
   nitro: {
     prerender: {
-      routes: ['/sitemap.xml'],
+      routes: (() => {
+        // Always include sitemap
+        const routes = ['/sitemap.xml']
+        // Add blog post routes from blogdata.json
+        try {
+          const data = fs.readFileSync('./public/blogdata.json', 'utf-8')
+          const posts = JSON.parse(data)
+          if (Array.isArray(posts)) {
+            posts.forEach(post => {
+              if (post.slug) routes.push(`/blog/${post.slug}`)
+            })
+          }
+        } catch (e) {
+          console.warn('Could not read blogdata.json for prerender routes:', e)
+        }
+        return routes
+      })(),
     },
   },
 })
