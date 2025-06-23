@@ -2,3 +2,4 @@ User-Agent: *
 Disallow: /editor
 Disallow: /editor/
 Disallow: /editor/*
+Sitemap: https://johntamakloe.com/sitemap.xml
