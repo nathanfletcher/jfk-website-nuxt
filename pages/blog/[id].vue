@@ -39,7 +39,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import MarkdownIt from 'markdown-it'
-import { useHead, useAsyncData, useRuntimeConfig } from '#imports'
+import { useHead, useRuntimeConfig } from '#imports'
 import qs from 'qs'
 
 const route = useRoute()
@@ -48,17 +48,34 @@ const config = useRuntimeConfig()
 
 const md = new MarkdownIt({ html: true, linkify: true, typographer: true, breaks: true })
 
-const { data: staticPost } = await useAsyncData(
-  'blog-post',
-  async () => {
-    const res = await fetch('/blogdata.json')
-    const postsArr = await res.json()
-    return (Array.isArray(postsArr) ? postsArr : postsArr.data).find((p: any) => p.slug === postId) || null
+let staticPost: any = null
+if (process.server) {
+  // Use fs to read blogdata.json directly during SSG/SSR
+  try {
+    // @ts-ignore
+    const fs = await import('fs')
+    // @ts-ignore
+    const path = await import('path')
+    const filePath = path.resolve(process.cwd(), 'public', 'blogdata.json')
+    const data = fs.readFileSync(filePath, 'utf-8')
+    const postsArr = JSON.parse(data)
+    staticPost = (Array.isArray(postsArr) ? postsArr : postsArr.data).find((p: any) => p.slug === postId) || null
+  } catch (e) {
+    // eslint-disable-next-line no-console
+    console.warn('Could not read blogdata.json for static post:', e)
+    staticPost = null
   }
-)
+} else {
+  staticPost = null
+}
 
-const post = ref(staticPost.value)
+const post = ref(staticPost)
 const loading = ref(!post.value)
+
+// Set meta tags at build time for static posts
+if (process.server && post.value) {
+  setMetaTags(post.value)
+}
 
 onMounted(async () => {
   if (!post.value) {
@@ -83,6 +100,11 @@ onMounted(async () => {
     }
     loading.value = false
   }
+})
+
+// Set meta tags reactively only for client-fetched posts
+watch(post, (val, oldVal) => {
+  if (process.client && val && !oldVal) setMetaTags(val)
 })
 
 function formatDate(ts: string) {
@@ -160,11 +182,6 @@ function setMetaTags(postObj: any) {
     ]
   })
 }
-
-// Set meta tags reactively
-watch(post, (val) => {
-  if (val) setMetaTags(val)
-}, { immediate: true })
 </script>
 
 <style>
