@@ -1,4 +1,4 @@
-# JFK Personal Blog (Nuxt.js + Strapi + Static Fallback)
+# JFK Personal Blog (Nuxt.js + Strapi + Static/Hybrid Fallback)
 
 A robust, mobile-friendly personal blog built with Nuxt.js, featuring a WYSIWYG editor, Strapi CMS integration, and static JSON fallback for resilience against API downtime or cold starts. Includes a modern UI, advanced SEO, and a GitHub Actions workflow for automated static data, sitemap updates, and deployment.
 
@@ -8,7 +8,7 @@ A robust, mobile-friendly personal blog built with Nuxt.js, featuring a WYSIWYG 
 
 - **Nuxt.js 3** with Tailwind CSS for a modern, responsive UI
 - **Strapi CMS** integration for blog post management (API URL configurable)
-- **Static fallback**: Uses `public/blogdata.json` if Strapi API is slow/unavailable
+- **Hybrid static+API fallback**: Blog post pages are statically generated for all known posts at build time (SEO-friendly). If a post is not found in the static data, the page will attempt to fetch it from the Strapi API on the client side.
 - **Mobile-optimized WYSIWYG editor** (CKEditor 5, dynamic import)
 - **Autosave drafts** to localStorage with indicator
 - **SEO**: robots.txt, dynamic sitemap.xml, canonical tags, meta tags, and JSON-LD structured data
@@ -69,10 +69,11 @@ npm run preview
 
 ---
 
-## Static Fallback & Data Sync
+## Static & Hybrid Fallback Logic
 
-- If Strapi API is unavailable, blog pages load from `public/blogdata.json`.
-- Individual blog posts (`/blog/:slug`) now attempt to load from `public/blogdata.json` first for faster access, falling back to the Strapi API if not found locally.
+- All blog post pages (`/blog/:slug`) are statically generated at build time using `public/blogdata.json` for maximum SEO and link preview support.
+- If a user visits a blog post page that was not present at build time (e.g., a new post added to the API after deployment), the page will attempt to fetch the post from the Strapi API on the client side and display it if found.
+- If neither static nor API data is found, a "Post not found" message is shown.
 - `scripts/fetchBlogData.js` fetches all posts (with pagination) from Strapi and merges with existing static data.
 - `.github/workflows/fetch-blogdata.yml` runs the script hourly, auto-commits updates, generates `sitemap.xml`, and triggers deployment.
 
