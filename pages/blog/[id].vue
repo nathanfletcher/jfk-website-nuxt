@@ -36,7 +36,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import MarkdownIt from 'markdown-it'
 import { useHead, useAsyncData, useRuntimeConfig } from '#imports'
@@ -120,34 +120,35 @@ function getFirstSentences(text: string, count = 2): string {
   return match ? match[0].trim() : plain.split('\n').slice(0, count).join(' ')
 }
 
-if (post.value) {
-  const slug = post.value.slug || route.params.id
+function setMetaTags(postObj: any) {
+  if (!postObj) return
+  const slug = postObj.slug || route.params.id
   const canonicalUrl = (typeof window !== 'undefined' ? window.location.origin : 'https://johntamakloe.com') + `/blog/${encodeURIComponent(slug as string)}`
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'BlogPosting',
-    headline: post.value.title,
-    description: getFirstSentences(post.value.text, 2),
-    datePublished: post.value.publishedAt,
-    dateModified: post.value.updatedAt || post.value.publishedAt,
+    headline: postObj.title,
+    description: getFirstSentences(postObj.text, 2),
+    datePublished: postObj.publishedAt,
+    dateModified: postObj.updatedAt || postObj.publishedAt,
     author: { '@type': 'Person', name: 'John Tamakloe' },
     mainEntityOfPage: { '@type': 'WebPage', '@id': canonicalUrl },
     image: '/images/jt-hero-2.jpg',
     url: canonicalUrl
   }
   useHead({
-    title: post.value.title + ' | JFK Blog',
+    title: postObj.title + ' | JFK Blog',
     meta: [
-      { name: 'description', content: getFirstSentences(post.value.text, 2) },
-      { property: 'og:title', content: post.value.title },
-      { property: 'og:description', content: getFirstSentences(post.value.text, 2) },
+      { name: 'description', content: getFirstSentences(postObj.text, 2) },
+      { property: 'og:title', content: postObj.title },
+      { property: 'og:description', content: getFirstSentences(postObj.text, 2) },
       { property: 'og:site_name', content: 'John Tamakloe (Evangelist)' },
       { property: 'og:type', content: 'article' },
       { property: 'og:url', content: canonicalUrl },
       { property: 'og:image', content: '/images/jt-hero-2.webp' },
       { name: 'twitter:card', content: 'summary_large_image' },
-      { name: 'twitter:title', content: post.value.title },
-      { name: 'twitter:description', content: getFirstSentences(post.value.text, 2) },
+      { name: 'twitter:title', content: postObj.title },
+      { name: 'twitter:description', content: getFirstSentences(postObj.text, 2) },
       { name: 'twitter:image', content: '/images/jt-hero-2.webp' },
       { name: 'robots', content: 'index,follow' }
     ],
@@ -159,6 +160,11 @@ if (post.value) {
     ]
   })
 }
+
+// Set meta tags reactively
+watch(post, (val) => {
+  if (val) setMetaTags(val)
+}, { immediate: true })
 </script>
 
 <style>
