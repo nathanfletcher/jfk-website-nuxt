@@ -167,11 +167,11 @@ function setMetaTags(postObj: any) {
       { property: 'og:site_name', content: 'John Tamakloe (Evangelist)' },
       { property: 'og:type', content: 'article' },
       { property: 'og:url', content: canonicalUrl },
-      { property: 'og:image', content: '/images/jt-hero-2.webp' },
+      { property: 'og:image', content: '/images/jt-hero-2.jpg' },
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: postObj.title },
       { name: 'twitter:description', content: getFirstSentences(postObj.text, 2) },
-      { name: 'twitter:image', content: '/images/jt-hero-2.webp' },
+      { name: 'twitter:image', content: '/images/jt-hero-2.jpg' },
       { name: 'robots', content: 'index,follow' }
     ],
     link: [
