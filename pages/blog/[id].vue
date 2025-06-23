@@ -109,6 +109,8 @@ const renderedText = computed(() => {
 })
 
 function stripHtml(html: string): string {
+  // Replace &nbsp; and other common HTML entities
+  html = html.replace(/&nbsp;/g, ' ');
   return html.replace(/<[^>]*>/g, '')
 }
 
