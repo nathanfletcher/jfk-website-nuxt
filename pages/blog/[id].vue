@@ -144,11 +144,11 @@ if (post.value) {
       { property: 'og:site_name', content: 'John Tamakloe (Evangelist)' },
       { property: 'og:type', content: 'article' },
       { property: 'og:url', content: canonicalUrl },
-      { property: 'og:image', content: '/images/jt-hero-2.jpg' },
+      { property: 'og:image', content: '/images/jt-hero-2.webp' },
       { name: 'twitter:card', content: 'summary_large_image' },
       { name: 'twitter:title', content: post.value.title },
       { name: 'twitter:description', content: getFirstSentences(post.value.text, 2) },
-      { name: 'twitter:image', content: '/images/jt-hero-2.jpg' },
+      { name: 'twitter:image', content: '/images/jt-hero-2.webp' },
       { name: 'robots', content: 'index,follow' }
     ],
     link: [
