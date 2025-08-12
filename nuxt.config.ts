@@ -6,6 +6,22 @@ export default defineNuxtConfig({
   ssr: true,
   app: {
     baseURL: process.env.NUXT_APP_BASE_URL || '/',
+    head: {
+      script: [
+        {
+          async: true,
+          src: 'https://www.googletagmanager.com/gtag/js?id=G-4K9WY16XWX'
+        },
+        {
+          innerHTML: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-4K9WY16XWX');
+          `
+        }
+      ]
+    }
   },
   devtools: { enabled: false },
   vite: {
