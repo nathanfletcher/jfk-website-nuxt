@@ -36,75 +36,51 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { computed, watchEffect } from 'vue'
 import { useRoute } from 'vue-router'
 import MarkdownIt from 'markdown-it'
-import { useHead, useRuntimeConfig } from '#imports'
+import { useHead, useRuntimeConfig, useAsyncData } from '#imports'
 import qs from 'qs'
 
 const route = useRoute()
 const postId = decodeURIComponent(route.params.id as string)
 const config = useRuntimeConfig()
 
-const md = new MarkdownIt({ html: true, linkify: true, typographer: true, breaks: true })
+const { data: post, pending: loading } = await useAsyncData(`post-${postId}`, async () => {
+  // @ts-ignore
+  const postsArr = await $fetch('/blogdata.json').catch((err) => {
+    console.error('Could not fetch /blogdata.json', err)
+    return [] // Return empty array on error
+  })
 
-let staticPost: any = null
-if (process.server) {
-  // Use fs to read blogdata.json directly during SSG/SSR
-  try {
-    // @ts-ignore
-    const fs = await import('fs')
-    // @ts-ignore
-    const path = await import('path')
-    const filePath = path.resolve(process.cwd(), 'public', 'blogdata.json')
-    const data = fs.readFileSync(filePath, 'utf-8')
-    const postsArr = JSON.parse(data)
-    staticPost = (Array.isArray(postsArr) ? postsArr : postsArr.data).find((p: any) => p.slug === postId) || null
-  } catch (e) {
-    // eslint-disable-next-line no-console
-    console.warn('Could not read blogdata.json for static post:', e)
-    staticPost = null
-  }
-} else {
-  staticPost = null
-}
+  const posts = Array.isArray(postsArr) ? postsArr : (postsArr as any).data;
+  let foundPost = posts.find((p: any) => p.slug === postId) || null;
 
-const post = ref(staticPost)
-const loading = ref(!post.value)
-
-// Set meta tags at build time for static posts
-if (process.server && post.value) {
-  setMetaTags(post.value)
-}
-
-onMounted(async () => {
-  if (!post.value) {
-    // Fallback to API if not found in static data
+  // Fallback to API if not found in static data
+  if (!foundPost) {
     try {
       const query = qs.stringify({
         filters: { slug: { $eq: postId } },
       }, { encodeValuesOnly: true })
-      const res = await fetch(`${config.public.apiUrl}/blog-posts?${query}`, {
-        headers: { 'Content-Type': 'application/json' }
-      })
-      if (res.ok) {
-        const postsData = await res.json()
-        if (Array.isArray(postsData.data) && postsData.data[0]) {
-          post.value = postsData.data[0]
-        }
-      } else {
-        console.error('API fetch failed:', res.status, res.statusText)
+      // @ts-ignore
+      const res = await $fetch(`${config.public.apiUrl}/blog-posts?${query}`)
+      if (Array.isArray(res.data) && res.data[0]) {
+        foundPost = res.data[0]
       }
     } catch (e) {
       console.error('API fetch error:', e)
     }
-    loading.value = false
   }
+
+  return foundPost
 })
 
-// Set meta tags reactively only for client-fetched posts
-watch(post, (val, oldVal) => {
-  if (process.client && val && !oldVal) setMetaTags(val)
+const md = new MarkdownIt({ html: true, linkify: true, typographer: true, breaks: true })
+
+watchEffect(() => {
+  if (post.value) {
+    setMetaTags(post.value)
+  }
 })
 
 function formatDate(ts: string) {
