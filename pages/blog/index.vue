@@ -25,16 +25,71 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { useRuntimeConfig } from '#imports'
+import { ref, computed } from 'vue'
+import { useAsyncData, useRuntimeConfig } from '#imports'
 
 const PAGE_SIZE = 10
-const allPosts = ref<Array<{slug: string; id: number; publishedAt: string; title: string; text: string }>>([])
-const posts = ref<Array<{slug: string; id: number; publishedAt: string; title: string; text: string }>>([])
-const loading = ref(true)
-const hasMore = ref(false)
 const currentPage = ref(1)
-let usingFallback = false
+
+const { data: allPosts, pending: loading } = await useAsyncData('blog-posts-index', async () => {
+  const config = useRuntimeConfig()
+  let posts: any[] = []
+
+  // 1. Try to fetch from blogdata.json
+  try {
+    // @ts-ignore
+    const data = await $fetch('/blogdata.json')
+    const jsonData = Array.isArray(data) ? data : data.data
+    if (jsonData && jsonData.length > 0) {
+      posts = jsonData
+    }
+  } catch (err) {
+    console.warn('Could not load /blogdata.json, will fallback to API.', err)
+  }
+
+  // 2. Fallback to API if blogdata.json is empty or failed
+  if (posts.length === 0) {
+    console.log('Fetching from API as a fallback...')
+    try {
+      const firstPage = await $fetch(`${config.public.apiUrl}/blog-posts?sort=createdAt:desc&pagination[page]=1&pagination[pageSize]=${PAGE_SIZE}`)
+      if (firstPage && firstPage.data) {
+        posts.push(...firstPage.data)
+        const pagination = firstPage.meta?.pagination
+        if (pagination && pagination.total > posts.length) {
+          const { pageCount } = pagination
+          for (let page = 2; page <= pageCount; page++) {
+            const nextPage = await $fetch(`${config.public.apiUrl}/blog-posts?sort=createdAt:desc&pagination[page]=${page}&pagination[pageSize]=${PAGE_SIZE}`)
+            if (nextPage && nextPage.data) {
+              posts.push(...nextPage.data)
+            }
+          }
+        }
+      }
+    } catch (apiErr) {
+      console.error('API fallback failed.', apiErr)
+    }
+  }
+
+  // 3. Sort whatever data we got
+  posts.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+  return posts
+})
+
+// Computed ref for the posts to display
+const posts = computed(() => {
+  if (!allPosts.value) return []
+  return allPosts.value.slice(0, currentPage.value * PAGE_SIZE)
+})
+
+// Computed ref to check if more posts are available
+const hasMore = computed(() => {
+  if (!allPosts.value) return false
+  return posts.value.length < allPosts.value.length
+})
+
+function loadMore() {
+  currentPage.value++
+}
 
 function formatDate(ts: string) {
   return new Date(ts).toLocaleDateString()
@@ -55,72 +110,6 @@ function getFirstSentences(text: string, count = 2): string {
   const match = plain.match(new RegExp(`(([^.!?]*[.!?]){1,${count}})`));
   return match ? match[0].trim() : plain.split('\n').slice(0, count).join(' ');
 }
-
-function loadMore() {
-  const start = (currentPage.value - 1) * PAGE_SIZE
-  const end = currentPage.value * PAGE_SIZE
-  posts.value = allPosts.value.slice(0, end)
-  hasMore.value = end < allPosts.value.length
-  currentPage.value++
-}
-
-onMounted(async () => {
-  const config = useRuntimeConfig()
-  let apiTimedOut = false
-  const timeout = new Promise((_, reject) => setTimeout(() => { apiTimedOut = true; reject(new Error('timeout')) }, 3000))
-  try {
-    const res = await Promise.race([
-      fetch(`${config.public.apiUrl}/blog-posts?sort=createdAt:desc&pagination[page]=1&pagination[pageSize]=${PAGE_SIZE}`),
-      timeout
-    ])
-    if (res instanceof Response && res.ok) {
-      const data = await res.json()
-      allPosts.value = (data.data as Array<{slug: string; id: number; publishedAt: string; title: string; text: string}>)
-      posts.value = allPosts.value.slice(0, PAGE_SIZE)
-      // Check if more pages exist
-      hasMore.value = data.meta?.pagination?.total > PAGE_SIZE
-      // If more, fetch all for client-side load more
-      if (hasMore.value) {
-        let total = data.meta?.pagination?.total || allPosts.value.length
-        let pageCount = data.meta?.pagination?.pageCount || 1
-        let fetched = allPosts.value.length
-        let page = 2
-        while (fetched < total) {
-          const resMore = await fetch(`${config.public.apiUrl}/blog-posts?sort=createdAt:desc&pagination[page]=${page}&pagination[pageSize]=${PAGE_SIZE}`)
-          if (!resMore.ok) break
-          const moreData = await resMore.json()
-          if (Array.isArray(moreData.data)) {
-            allPosts.value.push(...moreData.data)
-            fetched += moreData.data.length
-          }
-          page++
-          if (page > pageCount) break
-        }
-        hasMore.value = posts.value.length < allPosts.value.length
-      }
-    } else {
-      throw new Error('API response not ok')
-    }
-  } catch (err) {
-    // Fallback to blogdata.json
-    usingFallback = true
-    const fallback = await fetch('/blogdata.json')
-    const fallbackData = await fallback.json()
-    allPosts.value = (Array.isArray(fallbackData) ? fallbackData : fallbackData.data) as Array<{slug: string; id: number; publishedAt: string; title: string; text: string}>
-    allPosts.value = allPosts.value.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
-    posts.value = allPosts.value.slice(0, PAGE_SIZE)
-    hasMore.value = allPosts.value.length > PAGE_SIZE
-    if (typeof window !== 'undefined') {
-      (window as any).__JFK_BLOGDATA_FALLBACK = fallbackData
-    }
-    if (apiTimedOut) {
-      console.warn('API timed out, using fallback blogdata.json')
-    } else {
-      console.error('API failed, using fallback blogdata.json:', err)
-    }
-  }
-  loading.value = false
-})
 </script>
 
 <style scoped>
