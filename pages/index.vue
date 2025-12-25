@@ -50,9 +50,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
-import { useRuntimeConfig } from '#imports'
-import { useHead } from '@unhead/vue'
+import { useAsyncData, useRuntimeConfig, useHead } from '#imports'
 
 interface BlogPost {
   title: string;
@@ -61,8 +59,40 @@ interface BlogPost {
   publishedAt: string;
 }
 
-const posts = ref<BlogPost[]>([])
-const loading = ref(true)
+const { data: posts, pending: loading } = await useAsyncData('homepage-posts', async () => {
+  const config = useRuntimeConfig()
+  let allPosts: BlogPost[] = []
+
+  // 1. Try to fetch from blogdata.json
+  try {
+    // @ts-ignore
+    const data = await $fetch('/blogdata.json')
+    const jsonData = Array.isArray(data) ? data : data.data
+    if (jsonData && jsonData.length > 0) {
+      allPosts = jsonData
+    }
+  } catch (err) {
+    console.warn('Could not load /blogdata.json, falling back to API.', err)
+  }
+
+  // 2. Fallback to API if blogdata.json is empty or failed
+  if (allPosts.length === 0) {
+    console.log('Fetching from API as a fallback...')
+    try {
+      const apiData = await $fetch(`${config.public.apiUrl}/blog-posts?sort=createdAt:desc`)
+      if (apiData && apiData.data) {
+        allPosts = apiData.data
+      }
+    } catch (apiErr) {
+      console.error('API fallback also failed.', apiErr)
+      allPosts = [] // Ensure it's an array on failure
+    }
+  }
+  
+  // 3. Sort all posts and return the top 3
+  allPosts.sort((a, b) => new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime())
+  return allPosts.slice(0, 3)
+})
 
 function formatDate(ts: string) {
   return new Date(ts).toLocaleDateString()
@@ -83,46 +113,6 @@ function getFirstSentences(text: string, count = 2): string {
   const match = plain.match(new RegExp(`(([^.!?]*[.!?]){1,${count}})`));
   return match ? match[0].trim() : plain.split('\n').slice(0, count).join(' ');
 }
-
-onMounted(async () => {
-  try {
-    const config = useRuntimeConfig()
-    const base = config.app.baseURL || '/'
-    let apiTimedOut = false
-    const timeout = new Promise((_, reject) => setTimeout(() => { apiTimedOut = true; reject(new Error('timeout')) }, 3000))
-    try {
-      const res = await Promise.race([
-        fetch(`${config.public.apiUrl}/blog-posts?sort=createdAt:desc`),
-        timeout
-      ])
-      if (res instanceof Response && res.ok) {
-        const data = await res.json()
-        posts.value = data.data.slice(0, 3)
-      } else {
-        throw new Error('API response not ok')
-      }
-    } catch (err) {
-      // Fallback to blogdata.json
-      const fallback = await fetch('/blogdata.json')
-      const fallbackData = await fallback.json()
-      // Use fallbackData.data as the posts list
-      posts.value = fallbackData.data.slice(0, 3)
-      // Set a global fallback for the blog post page
-      if (typeof window !== 'undefined') {
-        (window as any).__JFK_BLOGDATA_FALLBACK = fallbackData
-      }
-      if (apiTimedOut) {
-        console.warn('API timed out, using fallback blogdata.json')
-      } else {
-        console.error('API failed, using fallback blogdata.json:', err)
-      }
-    }
-  } catch (error) {
-    console.error('Failed to fetch blog posts:', error)
-  } finally {
-    loading.value = false
-  }
-})
 
 useHead({
   title: "John Tamakloe (Evangelist) | Personal Website & Blog",
