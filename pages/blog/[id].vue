@@ -30,8 +30,8 @@
           <time :datetime="post.publishedAt">{{ formatDate(post.publishedAt) }}</time>
         </div>
       </div>
-      <div class="ck-content prose prose-blue max-w-none" v-html="renderedText"></div>
       <ShareButtons v-if="post" :title="post.title" :description="getFirstSentences(post.text, 2)" />
+      <div class="ck-content prose prose-blue max-w-none" v-html="renderedText"></div>
       
     </article>
   </div>
