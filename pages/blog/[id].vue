@@ -31,6 +31,7 @@
         </div>
       </div>
       <div class="ck-content prose prose-blue max-w-none" v-html="renderedText"></div>
+      <ShareButtons v-if="post" :title="post.title" />
     </article>
   </div>
 </template>
@@ -84,7 +85,11 @@ watchEffect(() => {
 })
 
 function formatDate(ts: string) {
-  return new Date(ts).toLocaleDateString()
+  const date = new Date(ts)
+  const day = String(date.getDate()).padStart(2, '0')
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const year = date.getFullYear()
+  return `${day}/${month}/${year}`
 }
 
 function whatsappToMarkdown(text: string): string {

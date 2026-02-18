@@ -32,7 +32,9 @@ export default defineNuxtConfig({
   modules: [
     '@nuxtjs/tailwindcss',
     '@nuxt/content',
-    '@nuxt/image'
+    '@nuxt/image',
+    '@nuxt/icon',
+    '@nuxt/ui'
   ],
   css: ['~/assets/css/tailwind.css'],
   tailwindcss: {
