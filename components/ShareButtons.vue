@@ -75,7 +75,11 @@ const whatsappUrl = computed(() => {
 })
 
 const facebookUrl = computed(() => {
-  return `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl.value)}`
+  let url = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl.value)}`
+  if (props.description) {
+    url += `&quote=${encodeURIComponent(props.description)}`
+  }
+  return url
 })
 
 const twitterUrl = computed(() => {
