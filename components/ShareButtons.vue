@@ -55,6 +55,7 @@ import { ref, computed, onMounted } from 'vue'
 
 const props = defineProps<{
   title: string
+  description?: string
 }>()
 
 const currentUrl = ref('')
@@ -65,8 +66,11 @@ onMounted(() => {
 })
 
 const whatsappUrl = computed(() => {
-  const message = `${props.title}
-${currentUrl.value}`
+  let message = `*${props.title}*\n\n`
+  if (props.description) {
+    message += `${props.description}\n\n`
+  }
+  message += `${currentUrl.value}`
   return `https://wa.me/?text=${encodeURIComponent(message)}`
 })
 
@@ -75,12 +79,20 @@ const facebookUrl = computed(() => {
 })
 
 const twitterUrl = computed(() => {
-  return `https://twitter.com/intent/tweet?url=${encodeURIComponent(currentUrl.value)}&text=${encodeURIComponent(props.title)}`
+  let text = props.title
+  if (props.description) {
+    text += ` - ${props.description}`
+  }
+  return `https://twitter.com/intent/tweet?url=${encodeURIComponent(currentUrl.value)}&text=${encodeURIComponent(text)}`
 })
 
 async function copyToClipboard() {
   try {
-    await navigator.clipboard.writeText(currentUrl.value)
+    const textToCopy = props.description 
+      ? `${props.title}\n\n${props.description}\n\n${currentUrl.value}`
+      : `${props.title}\n${currentUrl.value}`
+      
+    await navigator.clipboard.writeText(textToCopy)
     copied.value = true
     setTimeout(() => {
       copied.value = false
