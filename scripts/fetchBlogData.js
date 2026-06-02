@@ -10,7 +10,7 @@ import { fileURLToPath } from 'url'
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 
-const API_URL = process.env.STRAPI_API_URL || process.env.NUXT_PUBLIC_API_URL || 'https://reliable-bubble-e0aafb3b9e.strapiapp.com/api'
+const API_URL = process.env.NUXT_PUBLIC_API_URL || process.env.STRAPI_API_URL || 'https://reliable-bubble-e0aafb3b9e.strapiapp.com/api'
 const OUT_PATH = path.join(__dirname, '../public/blogdata.json')
 const TIMESTAMP_PATH = path.join(__dirname, '../.last-fetch-timestamp')
 
@@ -68,6 +68,7 @@ async function fetchChangedPosts(lastFetchTime) {
 async function main() {
   try {
     console.log('--- Starting fetchBlogData.js ---')
+    console.log(`[fetchBlogData] API URL: ${API_URL}`)
 
     // Read last successful fetch timestamp (if any)
     let lastFetchTime = null
