@@ -3,8 +3,10 @@ name: Fetch Blog Data from Strapi
 
 on:
   schedule:
-    - cron: '0 * * * *' # Every hour
+    - cron: '0 */6 * * *' # Every 6 hours as a backup safety net
   workflow_dispatch:
+  repository_dispatch:
+    types: [strapi-content-updated]
 
 permissions:
   contents: write
@@ -34,7 +36,9 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: 'chore: update blogdata.json from Strapi [skip ci]'
-          file_pattern: public/blogdata.json
+          file_pattern: |
+            public/blogdata.json
+            .last-fetch-timestamp
 
       - name: Install sitemap package
         run: npm install sitemap
@@ -53,3 +57,4 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           event-type: trigger-deploy
+
