@@ -242,6 +242,7 @@ async function savePost() {
       articleUrl.value = `${window.location.origin}/blog/${encodeURIComponent(slug)}`
       showSuccessModal.value = true
       clearDraft()
+      triggerDeploy()
     } else {
       alert('Failed to save article. Please try again.')
     }
@@ -285,6 +286,21 @@ function slugify(text: string) {
 }
 function onTitleInput() {
   form.value.slug = slugify(form.value.title);
+}
+
+async function triggerDeploy() {
+  try {
+    await fetch(config.public.triggerUrl as string, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-trigger-key': config.public.triggerKey as string,
+      },
+      body: JSON.stringify({ event_type: 'strapi-content-updated' }),
+    })
+  } catch {
+    // fire-and-forget — the 6h schedule handles it if this fails
+  }
 }
 
 // Autosave draft on edit
