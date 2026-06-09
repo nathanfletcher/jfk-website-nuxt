@@ -18,6 +18,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Warm up Strapi instance
+        env:
+          API_URL: ${{ secrets.STRAPI_API_URL }}
+        run: |
+          MAX_ATTEMPTS=6
+          DELAY=10
+          for i in $(seq 1 $MAX_ATTEMPTS); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 "${API_URL}/blog-posts?pagination[pageSize]=1" 2>/dev/null || echo "000")
+            if [ "$STATUS" = "200" ]; then
+              echo "[warmup] Strapi responded with 200 on attempt $i"
+              exit 0
+            fi
+            if [ "$STATUS" = "404" ]; then
+              echo "[warmup] Strapi is awake but endpoint returned 404 on attempt $i — API may need permission/config fix"
+              exit 0
+            fi
+            echo "[warmup] Attempt $i/$MAX_ATTEMPTS — status: $STATUS, retrying in ${DELAY}s..."
+            sleep $DELAY
+          done
+          echo "[warmup] Strapi did not respond after $MAX_ATTEMPTS attempts — proceeding anyway"
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -28,6 +49,7 @@ jobs:
           node -e "let p=require('./package.json');p.scripts=p.scripts||{};p.scripts.postinstall='true';require('fs').writeFileSync('package.json',JSON.stringify(p,null,2));"
 
       - name: Fetch blog posts from Strapi and update blogdata.json
+        continue-on-error: true
         env:
           NUXT_PUBLIC_API_URL: ${{ secrets.STRAPI_API_URL }}
         run: node scripts/fetchBlogData.js

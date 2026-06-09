@@ -14,12 +14,36 @@ const API_URL = process.env.NUXT_PUBLIC_API_URL || process.env.STRAPI_API_URL ||
 const OUT_PATH = path.join(__dirname, '../public/blogdata.json')
 const TIMESTAMP_PATH = path.join(__dirname, '../.last-fetch-timestamp')
 
+const MAX_RETRIES = 3
+const RETRY_DELAY_MS = 2000
+
 // Use native fetch if available
 let fetchFn
 try {
   fetchFn = globalThis.fetch || fetch
 } catch {
   fetchFn = fetch
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function fetchWithRetry(url, retries = MAX_RETRIES) {
+  let lastError
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const res = await fetchFn(url)
+      return res
+    } catch (err) {
+      lastError = err
+      console.warn(`[fetchBlogData] Attempt ${attempt}/${retries} failed: ${err.message}`)
+      if (attempt < retries) {
+        await sleep(RETRY_DELAY_MS * attempt)
+      }
+    }
+  }
+  throw lastError
 }
 
 /**
@@ -46,8 +70,8 @@ async function fetchChangedPosts(lastFetchTime) {
 
   do {
     const url = `${baseUrl}&pagination[page]=${page}`
-    console.log(`[fetchBlogData] Fetching page ${page}...`)
-    const res = await fetchFn(url)
+    console.log(`[fetchBlogData] Fetching page ${page}: ${url}`)
+    const res = await fetchWithRetry(url)
     if (!res.ok) {
       const text = await res.text().catch(() => '')
       throw new Error(`Failed to fetch: ${res.status} ${res.statusText} - ${text}`)
@@ -115,8 +139,19 @@ async function main() {
     console.log(`[fetchBlogData] Existing posts in blogdata.json: ${existingMap.size}`)
 
     // Fetch changed (or all) posts from Strapi
-    const posts = await fetchChangedPosts(isIncremental ? lastFetchTime : null)
-    console.log(`[fetchBlogData] Fetched ${posts.length} posts from Strapi.`)
+    let posts
+    try {
+      posts = await fetchChangedPosts(isIncremental ? lastFetchTime : null)
+      console.log(`[fetchBlogData] Fetched ${posts.length} posts from Strapi.`)
+    } catch (fetchErr) {
+      if (existingMap.size > 0) {
+        console.error(`[fetchBlogData] API fetch failed but ${existingMap.size} existing posts are available.`)
+        console.error('[fetchBlogData] Keeping existing data. Error:', fetchErr.message)
+        console.log('[fetchBlogData] --- Script complete (existing data preserved) ---')
+        process.exit(0)
+      }
+      throw fetchErr
+    }
 
     // Merge: update or add new posts
     let updated = 0
@@ -148,7 +183,7 @@ async function main() {
 
     console.log('[fetchBlogData] --- Script complete ---')
   } catch (e) {
-    console.error('[fetchBlogData] Error:', e)
+    console.error('[fetchBlogData] Fatal error:', e)
     process.exit(1)
   }
 }
