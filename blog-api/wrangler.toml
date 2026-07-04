@@ -1,0 +1,7 @@
+name = "blog-api"
+main = "src/index.js"
+compatibility_date = "2024-07-01"
+
+[vars]
+GITHUB_REPO_OWNER = "nathanfletcher"
+GITHUB_REPO_NAME = "jfk-website-nuxt"

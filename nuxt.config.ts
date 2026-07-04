@@ -24,6 +24,9 @@ export default defineNuxtConfig({
     }
   },
   devtools: { enabled: false },
+  routeRules: {
+    '/editor/**': { ssr: false }
+  },
   vite: {
     plugins: [
       tailwindcss(),
@@ -47,7 +50,9 @@ export default defineNuxtConfig({
     public: {
       apiUrl: process.env.NUXT_PUBLIC_API_URL || 'https://reliable-bubble-e0aafb3b9e.strapiapp.com/api',
       triggerUrl: process.env.NUXT_PUBLIC_TRIGGER_URL || 'https://github-trigger-574407922062.europe-west1.run.app',
-      triggerKey: process.env.NUXT_PUBLIC_TRIGGER_KEY || '203edbaf4533821321156c9f1b4049b5a8ec626b4a99af6706015794746a6dea'
+      triggerKey: process.env.NUXT_PUBLIC_TRIGGER_KEY || '203edbaf4533821321156c9f1b4049b5a8ec626b4a99af6706015794746a6dea',
+      clerkPublishableKey: process.env.NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY || '',
+      workerUrl: process.env.NUXT_PUBLIC_WORKER_URL || ''
     }
   },
   nitro: {

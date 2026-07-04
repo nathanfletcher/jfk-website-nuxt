@@ -47,26 +47,17 @@ const { data: allPosts, pending: loading } = await useAsyncData('blog-posts-inde
     console.warn('Could not load /blogdata.json, will fallback to API.', err)
   }
 
-  // 2. Fallback to API if blogdata.json is empty or failed
+  // 2. Fallback to Worker API if blogdata.json is empty or failed
   if (posts.length === 0) {
-    console.log('Fetching from API as a fallback...')
+    console.log('Fetching from Worker API as a fallback...')
     try {
-      const firstPage = await $fetch(`${config.public.apiUrl}/blog-posts?sort=createdAt:desc&pagination[page]=1&pagination[pageSize]=${PAGE_SIZE}`)
-      if (firstPage && firstPage.data) {
-        posts.push(...firstPage.data)
-        const pagination = firstPage.meta?.pagination
-        if (pagination && pagination.total > posts.length) {
-          const { pageCount } = pagination
-          for (let page = 2; page <= pageCount; page++) {
-            const nextPage = await $fetch(`${config.public.apiUrl}/blog-posts?sort=createdAt:desc&pagination[page]=${page}&pagination[pageSize]=${PAGE_SIZE}`)
-            if (nextPage && nextPage.data) {
-              posts.push(...nextPage.data)
-            }
-          }
-        }
+      // @ts-ignore
+      const res = await $fetch(`${config.public.workerUrl}/posts`)
+      if (res && res.data) {
+        posts.push(...res.data)
       }
     } catch (apiErr) {
-      console.error('API fallback failed.', apiErr)
+      console.error('Worker API fallback failed.', apiErr)
     }
   }
 

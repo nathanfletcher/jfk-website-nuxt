@@ -58,19 +58,16 @@ const { data: post, pending: loading } = await useAsyncData(`post-${postId}`, as
   const posts = Array.isArray(postsArr) ? postsArr : (postsArr as any).data;
   let foundPost = posts.find((p: any) => p.slug === postId) || null;
 
-  // Fallback to API if not found in static data
+  // Fallback to Worker API if not found in static data
   if (!foundPost) {
     try {
-      const query = qs.stringify({
-        filters: { slug: { $eq: postId } },
-      }, { encodeValuesOnly: true })
       // @ts-ignore
-      const res = await $fetch(`${config.public.apiUrl}/blog-posts?${query}`)
-      if (Array.isArray(res.data) && res.data[0]) {
+      const res = await $fetch(`${config.public.workerUrl}/posts?slug=${encodeURIComponent(postId)}`)
+      if (res && Array.isArray(res.data) && res.data[0]) {
         foundPost = res.data[0]
       }
     } catch (e) {
-      console.error('API fetch error:', e)
+      console.error('Worker API fetch error:', e)
     }
   }
 

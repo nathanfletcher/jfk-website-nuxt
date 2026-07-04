@@ -81,10 +81,13 @@
 import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useRuntimeConfig } from '#imports'
+import { useAuth } from '@clerk/vue'
 
 const router = useRouter()
 const route = useRoute()
 const config = useRuntimeConfig()
+
+const { getToken, signOut } = useAuth()
 
 const editor = ref()
 const ClassicEditor = ref()
@@ -93,15 +96,13 @@ const editorConfig = { toolbar: [ 'heading', '|', 'bold', 'italic', 'link', 'bul
 const isEdit = ref(false)
 const form = ref({ title: '', slug: '', text: '' })
 const saving = ref(false)
-const editingPostId = ref(null)
 const ready = ref(false)
 const showDeleteConfirm = ref(false)
 const showCancelConfirm = ref(false)
 const showSuccessModal = ref(false)
 const articleUrl = ref('')
 
-const API_URL = config.public.apiUrl
-const token = ref<string | null>(null)
+const WORKER_URL = config.public.workerUrl
 
 onMounted(async () => {
   if (process.client) {
@@ -109,8 +110,7 @@ onMounted(async () => {
     const { default: Classic } = await import('@ckeditor/ckeditor5-build-classic')
     editor.value = Ckeditor
     ClassicEditor.value = Classic
-    // Restore token
-    token.value = localStorage.getItem('jfk_blog_editor_token')
+    
     // If editing, load post data by slug
     if (route.query.slug) {
       await loadPostBySlug(route.query.slug as string)
@@ -121,11 +121,9 @@ onMounted(async () => {
 
 async function loadPostBySlug(slug: string) {
   isEdit.value = true
-  const res = await fetch(`${API_URL}/blog-posts?filters[slug][$eq]=${encodeURIComponent(slug)}`);
+  const res = await fetch(`${WORKER_URL}/posts?slug=${encodeURIComponent(slug)}`)
   const data = await res.json()
   if (data.data && data.data.length > 0) {
-    // Use documentId for Strapi 5
-    editingPostId.value = data.data[0].documentId
     form.value = {
       title: data.data[0].title,
       slug: data.data[0].slug,
@@ -184,84 +182,79 @@ async function savePost() {
       slug = slugify(form.value.title)
       form.value.slug = slug
     }
-    let postDocumentId = null
-    let success = false
-    // Always search for post by slug first
-    const res = await fetch(`${API_URL}/blog-posts?filters[slug][$eq]=${encodeURIComponent(slug)}`);
-    if (res.ok) {
-      const data = await res.json()
-      if (data.data && data.data.length > 0) {
-        // Post exists, update it using documentId
-        postDocumentId = data.data[0].documentId
-        const updateBody = {
-          data: {
-            title: form.value.title,
-            text: form.value.text,
-            slug: form.value.slug
-          }
-        }
-        const updateRes = await fetch(`${API_URL}/blog-posts/${postDocumentId}`,
-          {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${token.value}`
-            },
-            body: JSON.stringify(updateBody)
-          })
-        success = updateRes.ok
-      } else {
-        // Post does not exist, create it
-        const createBody = {
-          data: {
-            title: form.value.title,
-            text: form.value.text,
-            slug: form.value.slug
-          }
-        }
-        const createRes = await fetch(`${API_URL}/blog-posts`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${token.value}`
-          },
-          body: JSON.stringify(createBody)
-        })
-        if (createRes.ok) {
-          const createData = await createRes.json()
-          slug = createData.data?.slug || form.value.slug
-          postDocumentId = createData.data?.documentId
-          success = true
-        }
+
+    const tokenValue = await getToken.value()
+    const authHeader = 'Bearer ' + tokenValue
+
+    let url = ''
+    let method = 'POST'
+    let body: any = {}
+
+    if (isEdit.value && route.query.slug) {
+      method = 'PUT'
+      url = `${WORKER_URL}/posts?slug=${encodeURIComponent(route.query.slug as string)}`
+      body = {
+        title: form.value.title,
+        text: form.value.text,
+        newSlug: form.value.slug
       }
     } else {
-      alert('Failed to fetch post by slug. Please try again.')
-      return
+      method = 'POST'
+      url = `${WORKER_URL}/posts`
+      body = {
+        title: form.value.title,
+        text: form.value.text,
+        slug: form.value.slug
+      }
     }
-    if (success) {
+
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': authHeader
+      },
+      body: JSON.stringify(body)
+    })
+
+    if (res.ok) {
       articleUrl.value = `${window.location.origin}/blog/${encodeURIComponent(slug)}`
       showSuccessModal.value = true
       clearDraft()
-      triggerDeploy()
     } else {
-      alert('Failed to save article. Please try again.')
+      const errData = await res.json().catch(() => ({}))
+      alert('Failed to save article: ' + (errData.error || 'Please try again.'))
     }
+  } catch (err) {
+    console.error('Save error:', err)
+    alert('An error occurred while saving. Please check your connection and try again.')
   } finally {
     saving.value = false
   }
 }
 
 async function deletePost() {
-  if (!editingPostId.value) return
   saving.value = true
   try {
-    // Use documentId for Strapi 5
-    await fetch(`${API_URL}/blog-posts/${editingPostId.value}`, {
+    const tokenValue = await getToken.value()
+    const authHeader = 'Bearer ' + tokenValue
+
+    const res = await fetch(`${WORKER_URL}/posts?slug=${encodeURIComponent(form.value.slug)}`, {
       method: 'DELETE',
-      headers: { Authorization: `Bearer ${token.value}` }
+      headers: {
+        'Authorization': authHeader
+      }
     })
-    router.push('/editor')
-    clearDraft()
+
+    if (res.ok) {
+      router.push('/editor')
+      clearDraft()
+    } else {
+      alert('Failed to delete post.')
+    }
+  } catch (err) {
+    console.error('Delete error:', err)
+    alert('An error occurred while deleting.')
   } finally {
     saving.value = false
   }
@@ -271,8 +264,8 @@ function cancelEdit() {
   router.push('/editor')
 }
 
-function logout() {
-  localStorage.removeItem('jfk_blog_editor_token')
+async function logout() {
+  await signOut.value()
   router.push('/editor')
 }
 
@@ -286,21 +279,6 @@ function slugify(text: string) {
 }
 function onTitleInput() {
   form.value.slug = slugify(form.value.title);
-}
-
-async function triggerDeploy() {
-  try {
-    await fetch(config.public.triggerUrl as string, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-trigger-key': config.public.triggerKey as string,
-      },
-      body: JSON.stringify({ event_type: 'strapi-content-updated' }),
-    })
-  } catch {
-    // fire-and-forget — the 6h schedule handles it if this fails
-  }
 }
 
 // Autosave draft on edit

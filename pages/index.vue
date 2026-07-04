@@ -75,16 +75,17 @@ const { data: posts, pending: loading } = await useAsyncData('homepage-posts', a
     console.warn('Could not load /blogdata.json, falling back to API.', err)
   }
 
-  // 2. Fallback to API if blogdata.json is empty or failed
+  // 2. Fallback to Worker API if blogdata.json is empty or failed
   if (allPosts.length === 0) {
-    console.log('Fetching from API as a fallback...')
+    console.log('Fetching from Worker API as a fallback...')
     try {
-      const apiData = await $fetch(`${config.public.apiUrl}/blog-posts?sort=createdAt:desc`)
+      // @ts-ignore
+      const apiData = await $fetch(`${config.public.workerUrl}/posts`)
       if (apiData && apiData.data) {
         allPosts = apiData.data
       }
     } catch (apiErr) {
-      console.error('API fallback also failed.', apiErr)
+      console.error('Worker API fallback also failed.', apiErr)
       allPosts = [] // Ensure it's an array on failure
     }
   }

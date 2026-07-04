@@ -7,19 +7,19 @@
         <NuxtLink to="/editor" class="nav-link nav-link-active">Editor</NuxtLink>
       </div>
     </nav>
-    <div v-if="!isAuthenticated" class="login-form">
-      <h2 class="text-2xl font-bold mb-4 text-center">Editor Login</h2>
-      <form @submit.prevent="login">
-        <input v-model="identifier" type="text" placeholder="Email or Username" class="input" required />
-        <input v-model="password" type="password" placeholder="Password" class="input" required />
-        <button type="submit" class="btn-primary w-full mt-4" :disabled="loading">Login</button>
-        <div v-if="error" class="text-red-500 text-center mt-2">{{ error }}</div>
-      </form>
+    <div v-if="!isSignedIn" class="flex flex-col items-center justify-center min-h-[50vh]">
+      <h2 class="text-2xl font-bold mb-6 text-center text-gray-800">Editor Login</h2>
+      <client-only>
+        <SignIn sign-up-url="" :appearance="{ elements: { footer: 'hidden' } }" force-redirect-url="/editor" />
+      </client-only>
     </div>
     <div v-else class="editor-panel">
       <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-bold">Blog Editor</h2>
-        <button class="btn-secondary" @click="logout">Logout</button>
+        <div class="flex flex-col">
+          <h2 class="text-xl font-bold">Blog Editor</h2>
+          <span v-if="user" class="text-xs text-gray-500">Signed in as: {{ user.primaryEmailAddress?.emailAddress }}</span>
+        </div>
+        <button class="btn-secondary" @click="handleLogout">Logout</button>
       </div>
       <div class="mb-4">
         <input v-model="searchQuery" @input="searchPosts" type="text" placeholder="Search posts..." class="input w-full" />
@@ -29,17 +29,10 @@
       </div>
       <div v-if="loading" class="text-center py-4">Loading...</div>
       <div v-else>
-        <div v-for="post in filteredPosts" :key="post.id" class="post-list-item" @click="goToEdit(post)">
+        <div v-for="post in filteredPosts" :key="post.slug" class="post-list-item" @click="goToEdit(post)">
           <span class="font-semibold">{{ post.title }}</span>
-          <div class="text-xs text-gray-500">{{ formatDate(post.createdAt) }}</div>
+          <div class="text-xs text-gray-500">{{ formatDate(post.createdAt || post.publishedAt) }}</div>
         </div>
-      </div>
-    </div>
-    <div v-if="showColdStartModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div class="bg-white rounded-lg shadow-lg p-6 max-w-sm w-full text-center">
-        <h3 class="text-lg font-bold mb-2 text-blue-700">Editor is Waking Up</h3>
-        <p class="mb-4 text-gray-700">The editor backend is starting up. This may take up to a minute if the server was idle. Please wait and try again in a few moments.</p>
-        <button class="btn-primary w-full" @click="showColdStartModal = false">OK</button>
       </div>
     </div>
   </div>
@@ -47,104 +40,65 @@
 
 <script setup lang="ts">
 import { NuxtLink } from '#components'
-import { ref, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useRuntimeConfig } from '#imports'
+import { SignIn, useAuth, useUser } from '@clerk/vue'
 
 const router = useRouter()
 const config = useRuntimeConfig()
 
-const identifier = ref('')
-const password = ref('')
-const isAuthenticated = ref(false)
+const { isSignedIn, getToken, signOut } = useAuth()
+const { user } = useUser()
+
 const loading = ref(false)
-const error = ref('')
-const token = ref<string | null>(null)
 const posts = ref<any[]>([])
 const filteredPosts = ref<any[]>([])
 const searchQuery = ref('')
 
-onMounted(async () => {
-  if (process.client) {
-    // Restore token and auth state from localStorage
-    const savedToken = localStorage.getItem('jfk_blog_editor_token')
-    if (savedToken) {
-      token.value = savedToken
-      isAuthenticated.value = true
-      await fetchPosts()
-    }
-  }
-})
-
-const API_URL = config.public.apiUrl
-
-const loginTimeoutMs = 4000
-let loginTimeoutHandle: ReturnType<typeof setTimeout> | null = null
-const showColdStartModal = ref(false)
-
-async function login() {
-  loading.value = true
-  error.value = ''
-  showColdStartModal.value = false
-  if (loginTimeoutHandle) clearTimeout(loginTimeoutHandle)
-  loginTimeoutHandle = setTimeout(() => {
-    showColdStartModal.value = true
-  }, loginTimeoutMs)
-  try {
-    const res = await fetch(`${API_URL}/auth/local`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier: identifier.value, password: password.value })
-    })
-    const data = await res.json()
-    if (data.jwt) {
-      token.value = data.jwt
-      isAuthenticated.value = true
-      // Save token to localStorage for persistence
-      localStorage.setItem('jfk_blog_editor_token', data.jwt)
-      await fetchPosts()
-      showColdStartModal.value = false
-    } else {
-      error.value = data.error?.message || 'Login failed'
-    }
-  } catch (e) {
-    error.value = 'Login failed'
-  } finally {
-    loading.value = false
-    if (loginTimeoutHandle) clearTimeout(loginTimeoutHandle)
-  }
-}
-
-function formatDate(ts: string) {
-  return new Date(ts).toLocaleDateString()
-}
-
-function logout() {
-  isAuthenticated.value = false
-  token.value = ''
-  localStorage.removeItem('jfk_blog_editor_token')
-  posts.value = []
-  filteredPosts.value = []
-}
+const WORKER_URL = config.public.workerUrl
 
 async function fetchPosts() {
   loading.value = true
   try {
-    const res = await fetch(`${API_URL}/blog-posts?sort=createdAt:desc`, {
-      headers: { Authorization: `Bearer ${token.value}` }
-    })
+    const res = await fetch(`${WORKER_URL}/posts`)
     if (res.status === 401) {
-      // Token expired or invalid
-      logout()
-      error.value = 'Session expired. Please log in again.'
+      await handleLogout()
       return
     }
     const data = await res.json()
     posts.value = data.data || []
     filteredPosts.value = posts.value
+  } catch (err) {
+    console.error('Failed to fetch posts:', err)
   } finally {
     loading.value = false
   }
+}
+
+watch(isSignedIn, async (newVal) => {
+  if (newVal) {
+    await fetchPosts()
+  } else {
+    posts.value = []
+    filteredPosts.value = []
+  }
+}, { immediate: true })
+
+onMounted(async () => {
+  if (isSignedIn.value) {
+    await fetchPosts()
+  }
+})
+
+function formatDate(ts: string) {
+  if (!ts) return ''
+  return new Date(ts).toLocaleDateString()
+}
+
+async function handleLogout() {
+  await signOut.value()
+  router.push('/editor')
 }
 
 function searchPosts() {

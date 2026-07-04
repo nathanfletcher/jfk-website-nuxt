@@ -1,0 +1,269 @@
+# Bug Log — Strapi → Clerk + Cloudflare Worker Migration
+
+This document records every issue encountered during the migration of the JFK Blog from Strapi to the Clerk + Cloudflare Worker stack, along with root cause analysis and the final fix applied.
+
+---
+
+## BUG-01: Clerk Vue SDK — `signOut` / `getToken` are not functions
+
+**Date:** 2026-07-04
+**Affected files:** `pages/editor/index.vue`, `pages/editor/edit.vue`
+**Severity:** Critical (blocks logout and all write operations)
+
+### Symptoms
+- Browser console: `TypeError: signOut is not a function`
+- Browser console: `TypeError: getToken is not a function`
+- Logout button does nothing
+- Save/Update/Delete article fails with "An error occurred while saving"
+
+### Root Cause
+The Clerk Vue SDK (`@clerk/vue` v2.4.10) wraps **every** property returned by `useAuth()` inside a `ComputedRef`, including functions. Destructuring like this:
+
+```typescript
+const { getToken, signOut } = useAuth()
+```
+
+produces `ComputedRef<Function>` values, **not raw functions**. Calling `signOut()` directly fails because a `ComputedRef` is not callable — you must access `.value` first.
+
+The SDK's internal implementation:
+```js
+function toComputedRefs(objectRef) {
+  const result = {};
+  for (const key in objectRef.value) 
+    result[key] = computed(() => objectRef.value[key]);
+  return result;
+}
+```
+
+This converts ALL keys (including `getToken` and `signOut`) into individual `computed()` refs.
+
+### Fix
+Access functions through `.value`:
+
+```typescript
+// Before (broken)
+await signOut()
+const token = await getToken()
+
+// After (fixed)
+await signOut.value()
+const token = await getToken.value()
+```
+
+### Key Takeaway
+Always check the SDK version's type signature. `ToComputedRefs<UseAuthReturn>` means everything — reactive booleans AND functions — is wrapped in `ComputedRef`. Template auto-unwrapping hides this for `v-if="isSignedIn"`, but `<script>` code must explicitly use `.value`.
+
+---
+
+## BUG-02: Login redirects to homepage instead of `/editor`
+
+**Date:** 2026-07-04
+**Affected files:** `pages/editor/index.vue`
+**Severity:** Medium (usability)
+
+### Symptoms
+After successfully signing in via the Clerk `<SignIn />` component, the browser redirects to `/` (homepage) instead of staying on the editor dashboard.
+
+### Root Cause
+Clerk's `<SignIn />` component defaults to redirecting to the site root (`/`) after authentication unless explicitly told otherwise.
+
+### Fix
+Added the `force-redirect-url` prop to the `<SignIn />` component:
+
+```html
+<SignIn 
+  sign-up-url="" 
+  :appearance="{ elements: { footer: 'hidden' } }" 
+  force-redirect-url="/editor" 
+/>
+```
+
+---
+
+## BUG-03: Missing `.env` file — Clerk and Worker silently broken
+
+**Date:** 2026-07-04
+**Severity:** Critical (blocks all functionality)
+
+### Symptoms
+- Clerk sign-in form never renders
+- Previous posts never appear in the editor dashboard
+- No visible errors (silent failure)
+
+### Root Cause
+The `.env` file was never created during the migration. Nuxt's `runtimeConfig.public` relies on environment variables with the `NUXT_PUBLIC_` prefix. Without them:
+
+- `config.public.clerkPublishableKey` → `''` (empty string) → ClerkPlugin initializes with no key → `useAuth()` returns inert stubs
+- `config.public.workerUrl` → `''` (empty string) → `fetch(''/posts')` resolves to a relative URL hitting the local dev server → 404
+
+### Fix
+Created `.env` at the project root with:
+
+```env
+NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_***
+NUXT_PUBLIC_WORKER_URL=https://blog-api.***.workers.dev
+```
+
+**Important:** The `.env` file is gitignored and must be recreated on any new machine. For CI (GitHub Actions), these must be set as Repository Secrets.
+
+---
+
+## BUG-04: Worker writes silently fail on UTF-8 blog content
+
+**Date:** 2026-07-04
+**Affected files:** `blog-api/src/index.js`
+**Severity:** High (data corruption risk)
+
+### Symptoms
+- Worker returns HTTP 500 when fetching `blogdata.json` containing curly quotes, em dashes, or accented characters
+- Posts with special typography cannot be read or written
+
+### Root Cause
+Standard `atob()` in JavaScript decodes base64 as a binary-to-ASCII operation. It does NOT handle multi-byte UTF-8 sequences. John's articles contain directional apostrophes (`'` vs `'`), em dashes (`—`), and other Unicode characters. Using plain `atob()` on GitHub's base64-encoded content corrupted these characters, causing `JSON.parse()` to throw a `SyntaxError`.
+
+### Fix
+Added symmetrical UTF-8 base64 decoding inside `getBlogData()`:
+
+```javascript
+const decodedB64 = atob(base64Content.replace(/\n/g, ''))
+const content = decodeURIComponent(escape(decodedB64))
+return { posts: JSON.parse(content), sha }
+```
+
+This mirrors the encoding pattern (`btoa(unescape(encodeURIComponent(...)))`) used by `commitBlogData()`.
+
+### Key Takeaway
+Always pair `atob` with `decodeURIComponent(escape(...))` when the encoded content may contain non-ASCII characters. GitHub's Contents API returns UTF-8 JSON encoded as base64.
+
+---
+
+## BUG-05: Nuxt static generation crashes on `/editor/*` routes
+
+**Date:** 2026-07-04
+**Affected files:** `nuxt.config.ts`
+**Severity:** High (blocks deployment)
+
+### Symptoms
+Running `yarn generate` fails with 500 errors on `/editor` and `/editor/edit` routes during prerendering.
+
+### Root Cause
+Nuxt 3's static generator (`nitro prerender`) attempts to server-side render every page in `pages/`. The Clerk Vue SDK and CKEditor 5 both depend on browser-only APIs (`window`, `document`, `localStorage`). When Nitro tries to render these pages in a Node.js context, they throw `ReferenceError: window is not defined`.
+
+### Fix
+Added `routeRules` to mark all `/editor/**` paths as SPA-only (no SSR):
+
+```typescript
+routeRules: {
+  '/editor/**': { ssr: false }
+}
+```
+
+This tells Nitro to skip server-side rendering for these routes entirely. They are served as a client-side SPA shell.
+
+---
+
+## BUG-06: Cloudflare Worker `GET /posts` prone to GitHub rate-limit exhaustion
+
+**Date:** 2026-07-04
+**Affected files:** `blog-api/src/index.js`
+**Severity:** Medium (availability risk)
+
+### Symptoms
+- Every public page view triggers a GitHub API call
+- 5,000 requests/hour limit could be exhausted by crawlers or traffic spikes
+- Editor breaks when rate limit is hit
+
+### Root Cause
+The public `GET /posts` endpoint fetched `blogdata.json` from GitHub's API on every single request with no caching layer.
+
+### Fix
+Implemented Cloudflare Edge Cache API for all public GET responses:
+
+```javascript
+const cache = caches.default
+let cachedResponse = await cache.match(cacheKey)
+if (cachedResponse) return cachedResponse
+
+// ... fetch from GitHub ...
+
+response.headers.set('Cache-Control', 'public, max-age=3600')
+ctx.waitUntil(cache.put(cacheKey, response.clone()))
+```
+
+Write operations (POST, PUT, DELETE) invalidate the cache for both the list and affected slug endpoints.
+
+### Key Takeaway
+Always cache public GET responses at the edge when the underlying data source has rate limits. Cloudflare's Cache API is free and adds zero latency overhead.
+
+---
+
+## BUG-07: `blogdata.json` exceeds 1 MB GitHub Contents API limit
+
+**Date:** 2026-07-04
+**Affected files:** `blog-api/src/index.js`
+**Severity:** Medium (future-proofing)
+
+### Symptoms
+- GitHub Contents API omits `content` field for files > 1 MB
+- `getBlogData()` receives `base64Content = undefined` → crashes on `atob(undefined)`
+- Current `blogdata.json` is ~1.2 MB
+
+### Root Cause
+GitHub's Contents API has a hard 1 MB limit for inline content. For files exceeding this, the API returns metadata (including `sha`) but omits the `content` field.
+
+### Fix
+Added Git Blobs API fallback in `getBlogData()`:
+
+```javascript
+if (!base64Content && sha) {
+  const blobUrl = `https://api.github.com/repos/${owner}/${repo}/git/blobs/${sha}`
+  const blobRes = await fetch(blobUrl, { headers: ghHeaders(env) })
+  base64Content = (await blobRes.json()).content
+}
+```
+
+The Git Blobs API supports files up to 100 MB.
+
+---
+
+## BUG-08: Base64URL padding causes intermittent JWT verification failures
+
+**Date:** 2026-07-04
+**Affected files:** `blog-api/src/index.js`
+**Severity:** Low (rare edge case)
+
+### Symptoms
+- Clerk JWT verification intermittently fails with a `DOMException`
+- Happens when JWT payload length is not a multiple of 4
+
+### Root Cause
+JWTs use Base64URL encoding (no `=` padding). Standard `atob()` in some JavaScript engines throws `DOMException: "The string to be decoded is not correctly encoded"` when the input length is not a multiple of 4.
+
+### Fix
+Added a padding helper function used for all JWT decoding:
+
+```javascript
+function base64UrlDecode(str) {
+  let output = str.replace(/-/g, '+').replace(/_/g, '/');
+  switch (output.length % 4) {
+    case 0: break;
+    case 2: output += '=='; break;
+    case 3: output += '='; break;
+    default: throw new Error('Illegal base64url string!');
+  }
+  return atob(output);
+}
+```
+
+---
+
+## Summary of Files Modified
+
+| File | Bugs Addressed |
+|------|---------------|
+| `pages/editor/index.vue` | BUG-01, BUG-02, BUG-03 |
+| `pages/editor/edit.vue` | BUG-01 |
+| `nuxt.config.ts` | BUG-05 |
+| `blog-api/src/index.js` | BUG-04, BUG-06, BUG-07, BUG-08 |
+| `plugins/clerk.client.ts` | BUG-03 (created) |
+| `.env` | BUG-03 (created) |
