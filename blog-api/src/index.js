@@ -83,7 +83,7 @@ function ghHeaders(env) {
     'Content-Type': 'application/json',
     'Accept': 'application/vnd.github+json',
     'X-GitHub-Api-Version': '2022-11-28',
-    'User-Agent': 'blog-api-worker/1.0',
+    'User-Agent': 'blog-api-worker/1.1',
   }
 }
 
