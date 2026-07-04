@@ -4,10 +4,10 @@ export default defineNuxtPlugin((nuxtApp) => {
   const config = useRuntimeConfig()
   const key = config.public.clerkPublishableKey as string
   
-  // Only initialize Clerk if a publishable key is provided.
-  // Without this guard, an empty key (missing env var in CI) crashes
-  // the entire client-side app, including public blog pages.
-  if (!key) return
+  if (!key) {
+    console.warn('[Clerk] Publishable key is missing. Editor login will not work. Set NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY in your .env or GitHub Secrets.')
+    return
+  }
   
   nuxtApp.vueApp.use(clerkPlugin, {
     publishableKey: key
