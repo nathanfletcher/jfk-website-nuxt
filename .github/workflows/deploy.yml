@@ -25,6 +25,9 @@ jobs:
       #   run: NUXT_APP_BASE_URL=/${{ env.REPO_NAME }}/ yarn generate --preset github_pages
       - name: Build the project
         run: yarn generate --preset github_pages
+        env:
+          NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          NUXT_PUBLIC_WORKER_URL: ${{ secrets.NUXT_PUBLIC_WORKER_URL }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
