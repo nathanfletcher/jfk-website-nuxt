@@ -68,3 +68,90 @@ Following testing, we applied two critical optimizations to resolve common edge 
     const content = decodeURIComponent(escape(decodedB64))
     ```
 3.  **Edge Cache Header Conflicts:** Sending the `Authorization` header during a public blog post listing request was causing the Cloudflare Edge Cache API to raise uncacheable header warnings. We removed the auth header from `fetchPosts()` in `index.vue` to resolve this and activate free cache-hits.
+
+---
+
+## 4. Production Deployment Fixes (2026-07-04)
+
+Following the initial push to production, several critical issues were discovered and resolved:
+
+### 4.1 Clerk Vue SDK v2.4.10 ComputedRef Wrapping
+The Clerk Vue SDK wraps ALL return values from `useAuth()` — including functions — in `ComputedRef`. `signOut` and `getToken` require `.value` access:
+- `await signOut.value()` instead of `await signOut()`
+- `await getToken.value()` instead of `await getToken()`
+
+### 4.2 Prerendering: Blog Posts Not Rendered in Static HTML
+Nitro's prerenderer does not serve `public/` files over HTTP during build. Created `server/routes/blogdata.json.get.ts` to read from disk during prerendering, eliminating 40+ build errors and ensuring blog posts are embedded in the static HTML for SEO.
+
+### 4.3 GitHub Secrets Not Injected Into CI Build
+GitHub Secrets are not automatically available as environment variables. Added explicit `env` block in `deploy.yml` to pass `NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY` and `NUXT_PUBLIC_WORKER_URL` to the Nuxt build step.
+
+### 4.4 Clerk Plugin Crashing Entire Site
+The Clerk plugin was skipping installation when the publishable key was empty, causing `useAuth()` to throw globally and blank all pages. Fixed by always installing the plugin (even with empty key) and adding a `console.warn` for visibility.
+
+### 4.5 GitHub Pages Deployment Flakiness
+The `actions/deploy-pages@v4` floating tag had intermittent failures with larger artifacts. Pinned to `v4.0.5` for stable deployments.
+
+---
+
+## 5. Final Architecture
+
+```
+Author → Clerk Login → CKEditor → Worker API → GitHub Repo → Pages Deploy → johntamakloe.com
+```
+
+| Component | Technology | Cost |
+|-----------|-----------|:--:|
+| Auth | Clerk | $0 |
+| API | Cloudflare Worker | $0 |
+| Hosting | GitHub Pages | $0 |
+| CI/CD | GitHub Actions | $0 |
+| **Total** | | **$0/mo** |
+
+### Repository Secrets Required
+
+| Secret | Used By |
+|--------|---------|
+| `NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | `deploy.yml` → Nuxt build |
+| `NUXT_PUBLIC_WORKER_URL` | `deploy.yml` → Nuxt build |
+| `CLOUDFLARE_API_TOKEN` | `deploy-worker.yml` |
+| `CLOUDFLARE_ACCOUNT_ID` | `deploy-worker.yml` |
+
+### Local `.env` Required
+
+```env
+NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_***
+NUXT_PUBLIC_WORKER_URL=https://blog-api.***.workers.dev
+```
+
+### Worker Secrets Required
+
+```bash
+npx wrangler secret put GITHUB_PAT
+npx wrangler secret put CLERK_SECRET_KEY
+npx wrangler secret put CLERK_PUBLISHABLE_KEY
+```
+
+### Key Files Inventory
+
+| File | Purpose |
+|------|---------|
+| `pages/editor/index.vue` | Clerk login, post listing |
+| `pages/editor/edit.vue` | CKEditor CRUD with Worker API |
+| `plugins/clerk.client.ts` | Clerk Vue plugin (always installs) |
+| `server/routes/blogdata.json.get.ts` | Serve blogdata.json during prerendering |
+| `blog-api/src/index.js` | Cloudflare Worker — auth + GitHub CRUD |
+| `blog-api/wrangler.toml` | Worker config |
+| `.github/workflows/deploy.yml` | Nuxt build + Pages deploy |
+| `.github/workflows/deploy-worker.yml` | Worker auto-deploy |
+| `docs/BUGLOG.md` | 12 documented bugs + fixes |
+
+---
+
+## 6. Lessons Learned
+
+1. **Always check SDK types.** `ToComputedRefs<UseAuthReturn>` means functions are wrapped in `ComputedRef` — they need `.value` access in `<script>` but auto-unwrap in templates.
+2. **Nitro prerenderer does not serve `public/` over HTTP.** Static file fetches during build need a server route shim.
+3. **GitHub Secrets are not env vars.** They must be explicitly mapped in workflow `env` blocks.
+4. **Pin GitHub Actions versions.** Floating tags like `@v4` can introduce breaking changes.
+5. **Always install global plugins unconditionally.** A missing optional plugin should never crash unrelated pages.

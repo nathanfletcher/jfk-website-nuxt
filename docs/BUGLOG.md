@@ -265,5 +265,131 @@ function base64UrlDecode(str) {
 | `pages/editor/edit.vue` | BUG-01 |
 | `nuxt.config.ts` | BUG-05 |
 | `blog-api/src/index.js` | BUG-04, BUG-06, BUG-07, BUG-08 |
-| `plugins/clerk.client.ts` | BUG-03 (created) |
+| `plugins/clerk.client.ts` | BUG-03 (created), BUG-09 |
+| `server/routes/blogdata.json.get.ts` | BUG-10 (created) |
+| `.github/workflows/deploy.yml` | BUG-11 |
+| `.env` | BUG-03 (created) |
+
+---
+
+## BUG-09: Clerk plugin crashes entire site when publishable key is missing
+
+**Date:** 2026-07-04
+**Affected files:** `plugins/clerk.client.ts`
+**Severity:** Critical (blanks entire website)
+
+### Symptoms
+- All pages on the live site render blank (no blog posts, no navigation)
+- Browser console: `Error: @clerk/vue: useAuth can only be used when the Vue plugin is installed`
+- Only occurs when `NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY` is not set in CI
+
+### Root Cause
+The Clerk plugin was loaded globally (via `plugins/clerk.client.ts`). When the publishable key was empty (missing GitHub Secret), the plugin skipped initialization entirely. This caused `useAuth()` calls in the editor pages to throw "plugin not installed" errors — but since Nuxt plugins load globally, this error crashed the *entire* client-side Vue app, including public blog pages.
+
+### Fix
+Always install the Clerk plugin, even with an empty key. The `clerkPlugin` can handle an empty key gracefully — the `<SignIn />` component will show a configuration error instead of crashing:
+
+```typescript
+nuxtApp.vueApp.use(clerkPlugin, {
+  publishableKey: key || ''
+})
+```
+
+Also added a `console.warn` so the missing key is visible in logs.
+
+---
+
+## BUG-10: Blog posts not rendered in prerendered HTML (blank pages on live site)
+
+**Date:** 2026-07-04
+**Affected files:** `pages/index.vue`, `pages/blog/index.vue`, `pages/blog/[id].vue`, `server/routes/blogdata.json.get.ts`
+**Severity:** Critical (SEO + user-facing)
+
+### Symptoms
+- Build logs show 40+ instances of `Could not fetch /blogdata.json [GET] "/blogdata.json": 404 Page not found`
+- Blog pages and Latest Posts section render empty on the live site
+- Prerendered HTML contains no blog post content — only "Loading..." or empty divs
+
+### Root Cause
+During static generation (`yarn generate`), Nuxt's Nitro prerenderer runs a local server and calls `$fetch('/blogdata.json')` from the blog page components. However, Nitro does not serve files from `public/` over HTTP during prerendering. The fetch returns 404, the `useAsyncData` call returns empty data, and the prerendered HTML is generated without blog content.
+
+### Fix
+Created a Nitro server route at `server/routes/blogdata.json.get.ts` that reads `blogdata.json` from disk and serves it during prerendering:
+
+```typescript
+import { readFileSync } from 'fs'
+
+export default defineEventHandler(() => {
+  try {
+    const content = readFileSync('./public/blogdata.json', 'utf-8')
+    return JSON.parse(content)
+  } catch {
+    return []
+  }
+})
+```
+
+At runtime (static hosting), the physical `public/blogdata.json` file is served directly. The server route only activates during prerendering and development.
+
+---
+
+## BUG-11: GitHub Secrets not injected into CI build — Clerk broken on live site
+
+**Date:** 2026-07-04
+**Affected files:** `.github/workflows/deploy.yml`
+**Severity:** Critical (editor non-functional on live site)
+
+### Symptoms
+- Editor page at `johntamakloe.com/editor` throws error: `@clerk/vue: useAuth can only be used when the Vue plugin is installed`
+- Clerk login form never appears on the live site despite working locally
+- GitHub Secrets (`NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NUXT_PUBLIC_WORKER_URL`) are set in the repository
+
+### Root Cause
+GitHub Secrets are not automatically available as environment variables during CI builds. The `deploy.yml` workflow needed to explicitly pass them to the build step via the `env` block:
+
+```yaml
+- name: Build the project
+  run: yarn generate --preset github_pages
+  env:
+    NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NUXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+    NUXT_PUBLIC_WORKER_URL: ${{ secrets.NUXT_PUBLIC_WORKER_URL }}
+```
+
+Without this, `runtimeConfig.public.clerkPublishableKey` and `runtimeConfig.public.workerUrl` were empty strings at build time.
+
+### Fix
+Added the `env` block to the build step in `deploy.yml`, explicitly mapping each GitHub Secret to the corresponding `NUXT_PUBLIC_*` environment variable that Nuxt's runtime config expects.
+
+---
+
+## BUG-12: GitHub Pages deployment intermittently fails with `actions/deploy-pages@v4`
+
+**Date:** 2026-07-04
+**Affected files:** `.github/workflows/deploy.yml`
+**Severity:** Medium (blocks deployment)
+
+### Symptoms
+- Build step succeeds, artifact uploaded correctly (10.8 MB)
+- Deploy step fails with "Deployment failed, try again later" after 10 retries
+- Inconsistent: some commits deploy fine, others fail repeatedly
+
+### Root Cause
+The `actions/deploy-pages@v4` floating tag pulled in a version that had intermittent failures with larger artifacts (~10 MB+) on the GitHub Actions infrastructure. The exact cause is opaque (GitHub internal error).
+
+### Fix
+Pinned the action to a known-stable specific version: `actions/deploy-pages@v4.0.5`. This resolved the flaky deployments immediately.
+
+---
+
+## Updated Summary of Files Modified
+
+| File | Bugs Addressed |
+|------|---------------|
+| `pages/editor/index.vue` | BUG-01, BUG-02, BUG-03 |
+| `pages/editor/edit.vue` | BUG-01 |
+| `nuxt.config.ts` | BUG-05 |
+| `blog-api/src/index.js` | BUG-04, BUG-06, BUG-07, BUG-08 |
+| `plugins/clerk.client.ts` | BUG-03, BUG-09 |
+| `server/routes/blogdata.json.get.ts` | BUG-10 (created) |
+| `.github/workflows/deploy.yml` | BUG-11, BUG-12 |
 | `.env` | BUG-03 (created) |
